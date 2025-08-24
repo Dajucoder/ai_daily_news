@@ -253,6 +253,9 @@ reports/
 media/
 staticfiles/
 
+# AI News Agent output files
+output/
+
 # Backup files
 *.bak
 *.backup

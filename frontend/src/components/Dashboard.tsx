@@ -101,7 +101,23 @@ const Dashboard: React.FC = () => {
       setLoading(false);
     };
     
+    // 初始加载
     loadData();
+    
+    // 设置定时器，每5秒自动刷新状态
+    const interval = setInterval(async () => {
+      try {
+        // 只刷新状态数据，不显示loading
+        await Promise.all([loadStats(), loadFetchStatus(), loadAgentStatus()]);
+      } catch (error) {
+        console.error('自动刷新失败:', error);
+      }
+    }, 5000);
+    
+    // 清理定时器
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 
   const getImportanceColor = (importance: string) => {

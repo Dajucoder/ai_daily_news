@@ -62,6 +62,13 @@ cd ai_daily_news
 
 ```bash
 cd backend
+# 创建虚拟环境
+python -m venv venv
+# 激活虚拟环境 (Windows)
+venv\Scripts\activate
+# 激活虚拟环境 (macOS/Linux)
+source venv/bin/activate
+
 pip install -r requirements.txt
 cp .env.example .env
 # 编辑.env文件配置数据库和API密钥
@@ -84,10 +91,17 @@ npm start
 
 ```bash
 cd ai-news-agent
+# 创建虚拟环境
+python -m venv venv
+# 激活虚拟环境 (Windows)
+venv\Scripts\activate
+# 激活虚拟环境 (macOS/Linux)
+source venv/bin/activate
+
 pip install -r requirements.txt
 cp .env.example .env
 # 编辑.env文件配置OpenAI API密钥
-python start.py
+python api_server.py
 ```
 
 ## 📖 使用指南
