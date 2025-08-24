@@ -256,6 +256,9 @@ staticfiles/
 # AI News Agent output files
 output/
 
+# CodeBuddy files
+.codebuddy/
+
 # Backup files
 *.bak
 *.backup
