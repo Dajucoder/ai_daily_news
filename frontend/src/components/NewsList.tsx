@@ -40,10 +40,12 @@ const NewsList: React.FC = () => {
     search: '',
     category: '',
     importance: '',
+    source: '',
     days: 7
   });
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [availableSources, setAvailableSources] = useState<string[]>([]);
 
   const loadNews = async (page = 1) => {
     try {
@@ -81,9 +83,32 @@ const NewsList: React.FC = () => {
     }
   };
 
+  const loadAvailableSources = async () => {
+    try {
+      const response = await NewsService.getStats();
+      const sourceStats = response.source_stats || [];
+      const sources = sourceStats.map((stat: any) => stat.source);
+      setAvailableSources(sources);
+    } catch (error) {
+      console.error('获取RSS源列表失败:', error);
+      // 如果获取失败，使用默认的RSS源列表
+      setAvailableSources([
+        'Hugging Face博客',
+        'Reddit机器学习',
+        'MIT Tech Review',
+        'OpenAI博客',
+        'DeepMind博客'
+      ]);
+    }
+  };
+
   useEffect(() => {
     loadNews(1);
   }, [filters]);
+
+  useEffect(() => {
+    loadAvailableSources();
+  }, []);
 
   const handleSearch = (value: string) => {
     setFilters(prev => ({ ...prev, search: value }));
@@ -154,7 +179,7 @@ const NewsList: React.FC = () => {
       {/* 搜索和筛选 */}
       <Card style={{ marginBottom: '24px' }}>
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={12} md={6}>
             <Search
               placeholder="搜索新闻标题或内容"
               allowClear
@@ -174,7 +199,7 @@ const NewsList: React.FC = () => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={24} sm={12} md={3}>
             <Select
               placeholder="重要程度"
               allowClear
@@ -187,6 +212,24 @@ const NewsList: React.FC = () => {
             </Select>
           </Col>
           <Col xs={24} sm={12} md={4}>
+            <Select
+              placeholder="选择RSS源"
+              allowClear
+              style={{ width: '100%' }}
+              onChange={(value) => handleFilterChange('source', value)}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {availableSources.map((source) => (
+                <Option key={source} value={source}>
+                  {source}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={3}>
             <Select
               placeholder="时间范围"
               defaultValue={7}

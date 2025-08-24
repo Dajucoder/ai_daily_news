@@ -28,24 +28,24 @@ RSS_SOURCES = [
         "description": "Hugging Face官方博客，包含最新的AI模型和技术发布"
     },
     {
-        "name": "ArXiv AI论文",
-        "url": "http://rss.arxiv.org/rss/cs.AI",
-        "description": "ArXiv人工智能领域最新学术论文"
-    },
-    {
         "name": "Reddit机器学习",
         "url": "https://www.reddit.com/r/MachineLearning/.rss",
         "description": "Reddit机器学习社区热门讨论"
     },
     {
-        "name": "MIT Tech Review AI",
-        "url": "https://www.technologyreview.com/topic/artificial-intelligence/rss",
-        "description": "MIT科技评论人工智能专题"
+        "name": "MIT Tech Review",
+        "url": "https://www.technologyreview.com/feed/",
+        "description": "MIT科技评论科技新闻"
     },
     {
-        "name": "The Batch (Andrew Ng)",
-        "url": "https://landing.ai/the-batch/rss.xml",
-        "description": "Andrew Ng的AI周报"
+        "name": "OpenAI博客",
+        "url": "https://openai.com/blog/rss.xml",
+        "description": "OpenAI官方博客"
+    },
+    {
+        "name": "DeepMind博客",
+        "url": "https://deepmind.com/blog/feed/basic/",
+        "description": "DeepMind官方博客"
     }
 ]
 

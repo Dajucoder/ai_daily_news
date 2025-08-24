@@ -146,9 +146,10 @@ class RSSFetcher:
                     pass
             
             # 放宽时间检查：允许最近3天的文章
+            # 放宽时间检查：允许最近7天的文章
             if published_date:
                 days_diff = abs((published_date.date() - target_date).days)
-                if days_diff > 3:  # 超过3天的文章才过滤掉
+                if days_diff > 7:  # 超过7天的文章才过滤掉
                     return None
             else:
                 # 如果没有时间信息，保留文章

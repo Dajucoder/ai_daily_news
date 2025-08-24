@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <Statistic
               title="总新闻数"
-              value={stats?.total_news || 0}
+              value={stats?.total_count || 0}
               prefix={<FileTextOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -152,7 +152,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <Statistic
               title="今日新闻"
-              value={stats?.today_news || 0}
+              value={stats?.today_count || 0}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
@@ -162,7 +162,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <Statistic
               title="本周新闻"
-              value={stats?.week_news || 0}
+              value={stats?.week_count || 0}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#faad14' }}
             />
@@ -171,8 +171,8 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
-              title="本月新闻"
-              value={stats?.month_news || 0}
+              title="RSS源数量"
+              value={stats?.source_stats?.length || 0}
               prefix={<TrophyOutlined />}
               valueStyle={{ color: '#722ed1' }}
             />
@@ -207,9 +207,7 @@ const Dashboard: React.FC = () => {
                 <Text>点击按钮开始获取最新AI新闻</Text>
                 <br />
                 <Text type="secondary">
-                  最后获取时间: {stats?.last_fetch_time ? 
-                    new Date(stats.last_fetch_time).toLocaleString() : '暂无'
-                  }
+                  系统会自动从配置的RSS源获取最新新闻
                 </Text>
               </div>
             )}
@@ -261,13 +259,13 @@ const Dashboard: React.FC = () => {
         <Col xs={24}>
           <Card title="重要程度分布">
             <Row gutter={[16, 16]}>
-              {stats?.importance_stats && Object.entries(stats.importance_stats).map(([key, value]) => (
-                <Col xs={24} sm={8} key={key}>
+              {stats?.importance_stats && stats.importance_stats.map((item) => (
+                <Col xs={24} sm={8} key={item.importance}>
                   <Card size="small">
                     <Statistic
-                      title={key === 'high' ? '高' : key === 'medium' ? '中' : '低'}
-                      value={value}
-                      valueStyle={{ color: getImportanceColor(key) }}
+                      title={item.importance === 'high' ? '高' : item.importance === 'medium' ? '中' : '低'}
+                      value={item.count}
+                      valueStyle={{ color: getImportanceColor(item.importance) }}
                     />
                   </Card>
                 </Col>

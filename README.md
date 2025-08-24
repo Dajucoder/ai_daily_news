@@ -1,16 +1,17 @@
 # AI Daily News 智能新闻聚合平台
 
-一个基于AI的智能新闻聚合和分析平台，提供自动化新闻抓取、智能分析和个性化推荐功能。
+一个基于AI的智能新闻聚合和分析平台，提供自动化新闻抓取、智能分析和个性化推荐功能。该平台专注于AI相关新闻资讯的收集、处理和展示，为用户提供高质量的AI行业资讯服务。
 
 ## 🚀 项目特性
 
-- **智能新闻抓取**: 基于RSS源的自动化新闻收集
-- **AI内容分析**: 使用大语言模型进行新闻内容分析和摘要
-- **用户管理系统**: 完整的用户注册、登录和权限管理
-- **个性化推荐**: 基于用户偏好的智能新闻推荐
-- **数据可视化**: 新闻趋势和分析数据的可视化展示
-- **RESTful API**: 完整的后端API接口
-- **现代化前端**: 基于React的响应式用户界面
+- **🔄 智能新闻抓取**: 基于RSS源的自动化新闻收集，支持多个优质AI资讯源
+- **🤖 AI内容分析**: 使用硅基流动Qwen2.5大模型进行新闻内容分析、分类和摘要生成
+- **👥 用户管理系统**: 完整的用户注册、登录和权限管理，支持JWT身份认证
+- **📊 数据可视化**: 新闻趋势和分析数据的直观可视化展示
+- **🔍 搜索筛选**: 支持按分类、时间、重要程度等多维度搜索和筛选
+- **📱 响应式设计**: 基于React 18和Ant Design的现代化响应式用户界面
+- **🌐 RESTful API**: 完整的后端API接口，支持前后端分离架构
+- **⚡ 实时更新**: 支持定时任务和手动触发的新闻抓取
 
 ## 🏗️ 项目架构
 
@@ -23,25 +24,27 @@ ai_daily_news/
 └── README.md              # 项目说明
 ```
 
-### 技术栈
+### 🛠️ 技术栈
 
 **后端 (Backend)**
-- Django 4.x + Django REST Framework
-- PostgreSQL/SQLite 数据库
+- Django 5.2 + Django REST Framework
+- SQLite 数据库 (可扩展至PostgreSQL)
 - JWT 身份认证
-- Celery 异步任务处理
+- Python 3.8+
 
 **前端 (Frontend)**
 - React 18 + TypeScript
-- Material-UI / Ant Design
+- Ant Design 5.x 组件库
 - Axios HTTP客户端
-- React Router 路由管理
+- React Router 7.x 路由管理
+- Day.js 时间处理
 
 **AI代理 (AI Agent)**
 - Python 3.8+
-- OpenAI GPT API
-- RSS解析和处理
-- 自动化新闻分析
+- 硅基流动 API (Qwen2.5-7B-Instruct)
+- RSS解析和处理 (feedparser)
+- Flask API服务器
+- 自动化新闻分析和分类
 
 ## 🛠️ 快速开始
 
@@ -69,23 +72,33 @@ venv\Scripts\activate
 # 激活虚拟环境 (macOS/Linux)
 source venv/bin/activate
 
+# 安装依赖
 pip install -r requirements.txt
-cp .env.example .env
-# 编辑.env文件配置数据库和API密钥
+
+# 数据库迁移
 python manage.py migrate
+
+# 创建超级用户
 python manage.py createsuperuser
+
+# 启动开发服务器
 python manage.py runserver
 ```
+
+服务启动后，后端API将在 `http://localhost:8000` 运行
 
 ### 3. 前端设置
 
 ```bash
 cd frontend
+# 安装依赖
 npm install
-cp .env.example .env
-# 编辑.env文件配置API端点
+
+# 启动开发服务器
 npm start
 ```
+
+前端应用将在 `http://localhost:3000` 运行，并自动代理API请求到后端
 
 ### 4. AI代理设置
 
@@ -98,11 +111,17 @@ venv\Scripts\activate
 # 激活虚拟环境 (macOS/Linux)
 source venv/bin/activate
 
+# 安装依赖
 pip install -r requirements.txt
-cp .env.example .env
-# 编辑.env文件配置OpenAI API密钥
+
+# 配置API密钥
+export SILICONFLOW_API_KEY="your_api_key_here"
+
+# 启动AI代理服务器
 python api_server.py
 ```
+
+AI代理服务将在 `http://localhost:5001` 运行
 
 ## 📖 使用指南
 
@@ -117,38 +136,52 @@ python api_server.py
 
 后端提供完整的RESTful API，主要端点包括：
 
-- `POST /api/auth/login/` - 用户登录
-- `POST /api/auth/register/` - 用户注册
-- `GET /api/news/` - 获取新闻列表
-- `GET /api/news/{id}/` - 获取新闻详情
-- `GET /api/analytics/` - 获取分析数据
+**认证接口**
+- `POST /api/accounts/register/` - 用户注册
+- `POST /api/accounts/login/` - 用户登录
+- `POST /api/accounts/refresh/` - 刷新Token
+- `POST /api/accounts/logout/` - 用户登出
 
-详细API文档请参考 `docs/api.md`
+**新闻接口**
+- `GET /api/news/` - 获取新闻列表（支持分页、筛选）
+- `GET /api/news/{id}/` - 获取新闻详情
+- `POST /api/news/fetch/` - 触发新闻抓取
+- `GET /api/news/categories/` - 获取新闻分类列表
+- `GET /api/news/analytics/` - 获取新闻统计数据
+
+**AI代理接口 (端口5001)**
+- `GET /api/health` - 健康检查
+- `GET /api/sources` - 获取RSS源列表
+- `POST /api/fetch-news` - 开始抓取新闻
+- `GET /api/reports/latest` - 获取最新报告
+
+详细API文档请参考 `docs/api-documentation.md`
 
 ## 🔧 配置说明
 
-### 环境变量
+**AI代理配置**
+在使用AI代理前，需要设置硅基流动API密钥：
 
-**后端配置 (backend/.env)**
-```
-SECRET_KEY=your-secret-key
-DEBUG=True
-DATABASE_URL=sqlite:///db.sqlite3
-OPENAI_API_KEY=your-openai-api-key
+```bash
+# 在ai-news-agent目录下
+export SILICONFLOW_API_KEY="your_api_key_here"
 ```
 
-**前端配置 (frontend/.env)**
-```
-REACT_APP_API_URL=http://localhost:8000/api
-REACT_APP_WS_URL=ws://localhost:8000/ws
+或创建 `.env` 文件：
+```env
+SILICONFLOW_API_KEY=your_api_key_here
 ```
 
-**AI代理配置 (ai-news-agent/.env)**
-```
-OPENAI_API_KEY=your-openai-api-key
-RSS_SOURCES=source1.xml,source2.xml
-OUTPUT_DIR=./output
-```
+**RSS数据源**
+系统默认配置了以下优质AI资讯源：
+- Hugging Face博客
+- Reddit机器学习社区
+- MIT科技评论
+- OpenAI官方博客
+- DeepMind官方博客
+
+**数据库配置**
+项目默认使用SQLite数据库，无需额外配置。如需使用PostgreSQL，请修改Django设置文件。
 
 ## 🤝 贡献指南
 
@@ -166,11 +199,18 @@ OUTPUT_DIR=./output
 
 本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
+## 📖 更多文档
+
+- [开发规划文档](docs/development-plan.md) - 项目路线图和技术规划
+- [API文档](docs/api-documentation.md) - 详细的API接口说明
+- [部署指南](docs/deployment-guide.md) - 生产环境部署说明
+- [故障排除](docs/troubleshooting.md) - 常见问题解决方案
+
 ## 📞 联系我们
 
 - 项目主页: [GitHub Repository](https://github.com/your-username/ai_daily_news)
-- 问题反馈: [Issues](https://github.com/your-username/ai_daily_news/issues)
-- 邮箱: your-email@example.com
+- 问题反馈: [GitHub Issues](https://github.com/your-username/ai_daily_news/issues)
+- 贡献指南: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 🙏 致谢
 

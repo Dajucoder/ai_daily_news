@@ -47,6 +47,7 @@ export class NewsService {
     search?: string;
     category?: string;
     importance?: string;
+    source?: string;
     days?: number;
   }): Promise<ApiResponse<NewsItem>> {
     // 生成缓存键
@@ -138,7 +139,7 @@ export class NewsService {
     force_refresh?: boolean;
     max_news_count?: number;
   }): Promise<{ message: string }> {
-    const response = await api.post('/api/news/service/fetch_news/', params);
+    const response = await api.post('/api/news/service/start_fetch/', params);
     // 清除缓存，因为有新数据
     apiCache.clear();
     return response.data as { message: string };

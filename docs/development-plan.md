@@ -57,7 +57,9 @@ AI Daily News 是一个基于人工智能的新闻聚合和分析平台，采用
 - **版本**: v1.0.0
 - **发布日期**: 2024年12月
 - **核心功能**: 基础新闻聚合、AI分析、用户管理
-- **技术栈**: React 18 + Django 5.2 + Python 3.8+
+- **技术栈**: React 18 + Django 5.2 + Python 3.8+ + 硅基流动API
+- **数据源**: 5个优质AI资讯RSS源
+- **AI模型**: Qwen2.5-7B-Instruct (硅基流动)
 
 ## 开发路线图
 
@@ -452,15 +454,17 @@ AI Daily News 是一个基于人工智能的新闻聚合和分析平台，采用
 ## 附录
 
 ### 📚 相关文档
-- [API文档](http://localhost:8000/api/docs/)
-- [前端组件文档](./frontend-components.md)
+- [API接口文档](./api-documentation.md)
 - [部署指南](./deployment-guide.md)
 - [故障排除手册](./troubleshooting.md)
+- [前端应用文档](../frontend/README.md)
+- [AI代理文档](../ai-news-agent/README.md)
 
 ### 🔗 有用链接
-- [项目仓库](https://github.com/Dajucoder/ai_daily_news)
-- [问题跟踪](https://github.com/Dajucoder/ai_daily_news/issues)
+- [项目仓库](https://github.com/your-username/ai_daily_news)
+- [问题跟踪](https://github.com/your-username/ai_daily_news/issues)
 - [贡献指南](../CONTRIBUTING.md)
+- [项目主页](../README.md)
 
 ### 📞 联系方式
 - **项目负责人**: Dajucoder

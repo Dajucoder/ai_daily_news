@@ -16,13 +16,12 @@ export interface NewsItem {
 }
 
 export interface NewsStats {
-  total_news: number;
-  today_news: number;
-  week_news: number;
-  month_news: number;
-  last_fetch_time?: string;
-  category_stats: Record<string, number>;
-  importance_stats: Record<string, number>;
+  total_count: number;
+  today_count: number;
+  week_count: number;
+  category_stats: Array<{category: string; count: number}>;
+  importance_stats: Array<{importance: string; count: number}>;
+  source_stats: Array<{source: string; count: number}>;
 }
 
 export interface FetchHistory {
