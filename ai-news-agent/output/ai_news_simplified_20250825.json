@@ -1,0 +1,22 @@
+{
+  "collection_date": "2025-08-25",
+  "summary": "今日AI领域主要聚焦于研究进展和技术应用。在研究进展方面，有6篇新闻报道了JAX在后Transformer时代的进展、如何平衡训练数据集以改进多类别分类模型、AI代理选择合适的Foundation Models的方法、探索本地优先的人工智能工作流自动化以及非线性有理特征变换中的极点位置选择等内容。此外，还有一条关于技术突破的新闻，进一步推动了AI技术的发展。这些报道展示了AI研究和应用的广泛探索和深入发展。",
+  "total_count": 8,
+  "top_stories": [
+    {
+      "title": "JAX在后Transformer时代的进展如何？",
+      "source": "Reddit机器学习",
+      "summary": "近年来，JAX曾因Transformer模型的兴起而备受关注，甚至有观点认为它可能颠覆PyTorch的地位。然而，随着大型多模态模型和语言模型热潮的兴起，关于JAX的讨论和开发活动有所减少。本文作者认为，尽管目前JAX的发展似乎不如从前，但对于关注特定研究和行业需求的人来说，它仍然具有潜力和价值。",
+      "original_link": "https://www.reddit.com/r/MachineLearning/comments/1mybwih/d_how_did_jax_fare_in_the_post_transformer_world/",
+      "importance": "medium"
+    },
+    {
+      "title": "如何平衡训练数据集以改进多类别分类模型",
+      "source": "Reddit机器学习",
+      "summary": "作者正在开发一个使用Python的机器学习分类项目，数据集包含5个类别，但严重不平衡，导致模型偏向多数类别。尝试使用SMOTETomek进行过采样后效果不佳。作者希望改进模型以更好地学习少数类别的特征，寻求其他平衡训练数据集的方法。项目将使用包括随机森林、决策树等在内的6种分类模型，并对数据进行标准化处理。",
+      "original_link": "https://www.reddit.com/r/MachineLearning/comments/1mywuni/p_options_on_how_to_balance_my_training_dataset/",
+      "importance": "medium"
+    }
+  ],
+  "generated_time": "2025-08-25T03:21:16.849940+08:00"
+}

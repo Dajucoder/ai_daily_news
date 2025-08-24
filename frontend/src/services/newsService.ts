@@ -1,5 +1,5 @@
 import api from './api';
-import { NewsItem, NewsStats, FetchHistory, FetchStatus, ApiResponse } from '../types';
+import { NewsItem, NewsStats, FetchHistory, FetchStatus, AgentStatus, ApiResponse } from '../types';
 
 // 简单的缓存机制
 interface CacheItem<T> {
@@ -148,6 +148,12 @@ export class NewsService {
   static async getFetchStatus(): Promise<FetchStatus> {
     const response = await api.get('/api/news/service/fetch_status/');
     return response.data as FetchStatus;
+  }
+
+  // 获取AI代理状态
+  static async getAgentStatus(): Promise<AgentStatus> {
+    const response = await api.get('/api/news/service/agent_status/');
+    return response.data as AgentStatus;
   }
 }
 

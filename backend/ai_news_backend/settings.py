@@ -135,6 +135,20 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# 允许自定义请求头
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-timezone',  # 添加时区头
+]
+
 # API文档配置
 SPECTACULAR_SETTINGS = {
     'TITLE': 'AI新闻系统 API',
@@ -147,6 +161,9 @@ SPECTACULAR_SETTINGS = {
 SILICONFLOW_API_KEY = os.getenv('SILICONFLOW_API_KEY')
 SILICONFLOW_BASE_URL = os.getenv('SILICONFLOW_BASE_URL', 'https://api.siliconflow.cn/v1')
 MODEL_NAME = os.getenv('MODEL_NAME', 'Qwen/Qwen2.5-7B-Instruct')
+
+# AI新闻代理配置
+NEWS_AGENT_BASE_URL = os.getenv('NEWS_AGENT_BASE_URL', 'http://localhost:5001')
 
 # JWT配置
 SIMPLE_JWT = {

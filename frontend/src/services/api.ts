@@ -2,13 +2,40 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+// 设置上海时区
+const SHANGHAI_TIMEZONE = 'Asia/Shanghai';
+
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 0, // 移除超时限制
   headers: {
     'Content-Type': 'application/json',
+    'X-Timezone': SHANGHAI_TIMEZONE,
   },
 });
+
+// 时区工具函数
+export const formatDateForShanghai = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleString('zh-CN', {
+    timeZone: SHANGHAI_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+};
+
+export const getCurrentShanghaiTime = (): string => {
+  return new Date().toLocaleString('zh-CN', {
+    timeZone: SHANGHAI_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+};
 
 // 获取认证令牌
 const getAuthToken = () => {

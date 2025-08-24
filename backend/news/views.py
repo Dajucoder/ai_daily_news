@@ -88,9 +88,14 @@ class NewsItemViewSet(viewsets.ModelViewSet):
         week_news = NewsItem.objects.filter(created_at__gte=week_ago).count()
         month_news = NewsItem.objects.filter(created_at__gte=month_ago).count()
         
-        # 最后获取时间
-        last_news = NewsItem.objects.first()
-        last_fetch_time = last_news.created_at if last_news else None
+        # 最后获取时间 - 使用最新的获取历史记录时间
+        last_fetch_history = FetchHistory.objects.filter(status='success').first()
+        if last_fetch_history:
+            last_fetch_time = last_fetch_history.created_at
+        else:
+            # 如果没有获取历史，则使用最新新闻的创建时间
+            last_news = NewsItem.objects.first()
+            last_fetch_time = last_news.created_at if last_news else None
         
         # 分类统计
         category_stats = dict(
@@ -175,6 +180,11 @@ class SystemConfigViewSet(viewsets.ModelViewSet):
         tags=["新闻获取"],
         responses={200: FetchStatusSerializer}
     ),
+    agent_status=extend_schema(
+        summary="获取AI代理状态",
+        tags=["新闻获取"],
+        responses={200: {"description": "AI代理状态信息"}}
+    ),
 )
 class NewsServiceViewSet(viewsets.ViewSet):
     """新闻服务视图集"""
@@ -232,3 +242,11 @@ class NewsServiceViewSet(viewsets.ViewSet):
         
         serializer = FetchStatusSerializer(status_data)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def agent_status(self, request):
+        """获取AI代理状态"""
+        news_service = NewsService()
+        status_data = news_service.get_agent_status()
+        
+        return Response(status_data)

@@ -390,7 +390,7 @@ const NewsAnalytics: React.FC = () => {
                       percent={percentage} 
                       strokeColor="#1890ff"
                       showInfo={false}
-                      strokeWidth={6}
+                      size="small"
                     />
                   </div>
                 );

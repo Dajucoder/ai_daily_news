@@ -1,308 +1,167 @@
-# AI Daily News 🤖📰
+# AI Daily News 智能新闻聚合平台
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Django](https://img.shields.io/badge/Django-5.2+-green.svg)](https://www.djangoproject.com/)
-[![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6.svg)](https://www.typescriptlang.org/)
+一个基于AI的智能新闻聚合和分析平台，提供自动化新闻抓取、智能分析和个性化推荐功能。
 
-一个基于AI的智能新闻聚合和分析平台，采用现代化的前后端分离架构，自动获取、分析和展示AI相关新闻资讯。
+## 🚀 项目特性
 
-## ✨ 主要功能特性
+- **智能新闻抓取**: 基于RSS源的自动化新闻收集
+- **AI内容分析**: 使用大语言模型进行新闻内容分析和摘要
+- **用户管理系统**: 完整的用户注册、登录和权限管理
+- **个性化推荐**: 基于用户偏好的智能新闻推荐
+- **数据可视化**: 新闻趋势和分析数据的可视化展示
+- **RESTful API**: 完整的后端API接口
+- **现代化前端**: 基于React的响应式用户界面
 
-### 🔍 智能新闻获取
-- **自动化采集**: 定时从多个权威科技媒体获取AI相关新闻
-- **智能去重**: 基于内容相似度的智能去重算法
-- **多源聚合**: 支持多个新闻源的统一管理和展示
+## 🏗️ 项目架构
 
-### 🧠 AI驱动分析
-- **内容摘要**: 使用硅基流动AI服务生成新闻摘要
-- **重要性评级**: 智能评估新闻的重要程度
-- **分类标签**: 自动为新闻添加相关分类标签
+```
+ai_daily_news/
+├── ai-news-agent/          # AI新闻处理代理
+├── backend/                # Django后端服务
+├── frontend/               # React前端应用
+├── docs/                   # 项目文档
+└── README.md              # 项目说明
+```
 
-### 📊 数据可视化
-- **统计面板**: 实时展示新闻统计数据和趋势
-- **交互式图表**: 直观的数据可视化展示
-- **进度监控**: 实时显示新闻获取和处理进度
+### 技术栈
 
-### 🔎 高级搜索
-- **多维筛选**: 支持按分类、重要性、时间等多维度筛选
-- **全文搜索**: 支持标题和内容的全文搜索
-- **智能排序**: 按时间、重要性等多种方式排序
+**后端 (Backend)**
+- Django 4.x + Django REST Framework
+- PostgreSQL/SQLite 数据库
+- JWT 身份认证
+- Celery 异步任务处理
 
-### 👤 用户管理系统
-- **用户注册登录**: 完整的用户认证系统，支持JWT令牌认证
-- **个人资料管理**: 用户可以管理头像、个人简介等信息
-- **个性化设置**: 支持主题切换、语言设置、通知偏好等
-- **权限控制**: 基于角色的访问控制，保护敏感功能
+**前端 (Frontend)**
+- React 18 + TypeScript
+- Material-UI / Ant Design
+- Axios HTTP客户端
+- React Router 路由管理
 
-### 📈 数据分析与推荐
-- **新闻分析**: 深度分析新闻趋势和热点话题
-- **个性化推荐**: 基于用户行为的智能新闻推荐
-- **获取历史**: 完整的新闻获取历史记录和统计
-- **系统设置**: 灵活的系统配置和管理功能
+**AI代理 (AI Agent)**
+- Python 3.8+
+- OpenAI GPT API
+- RSS解析和处理
+- 自动化新闻分析
 
-## 🏗️ 技术架构
-
-### 后端技术栈
-- **框架**: Django 5.2 + Django REST Framework
-- **认证系统**: Django REST Framework SimpleJWT
-- **数据库**: SQLite (可扩展至PostgreSQL/MySQL)
-- **AI服务**: 硅基流动 (SiliconFlow) API
-- **API文档**: Swagger/OpenAPI 3.0
-- **跨域处理**: django-cors-headers
-
-### 前端技术栈
-- **框架**: React 18 + TypeScript
-- **UI库**: Ant Design
-- **状态管理**: React Hooks
-- **HTTP客户端**: Axios
-- **路由**: React Router
-
-### 架构特点
-- 🔄 **前后端分离**: RESTful API设计，前后端完全解耦
-- 📱 **响应式设计**: 支持桌面端和移动端访问
-- 🔒 **类型安全**: TypeScript提供完整的类型检查
-- 🚀 **高性能**: 优化的数据库查询和前端渲染
-
-## 🚀 快速开始
+## 🛠️ 快速开始
 
 ### 环境要求
 
 - Python 3.8+
 - Node.js 16+
-- npm 或 yarn
+- PostgreSQL (可选，默认使用SQLite)
 
-### 安装步骤
+### 1. 克隆项目
 
-1. **克隆项目**
-   ```bash
-   git clone https://github.com/Dajucoder/ai_daily_news.git
-   cd ai_daily_news
-   ```
+```bash
+git clone https://github.com/your-username/ai_daily_news.git
+cd ai_daily_news
+```
 
-2. **配置环境变量**
-   ```bash
-   cp .env.example .env
-   # 编辑 .env 文件，填入你的硅基流动API密钥
-   ```
+### 2. 后端设置
 
-3. **后端设置**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   python manage.py migrate
-   python manage.py createsuperuser  # 创建管理员账户
-   ```
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+# 编辑.env文件配置数据库和API密钥
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
 
-4. **前端设置**
-   ```bash
-   cd frontend
-   npm install
-   ```
+### 3. 前端设置
 
-5. **启动服务**
-   
-   **方式一：使用启动脚本**
-   ```bash
-   # Linux/Mac
-   ./start.sh
-   
-   # Windows
-   start.bat
-   ```
-   
-   **方式二：手动启动**
-   ```bash
-   # 启动后端 (终端1)
-   cd backend && source venv/bin/activate && python manage.py runserver
-   
-   # 启动前端 (终端2)
-   cd frontend && npm start
-   ```
+```bash
+cd frontend
+npm install
+cp .env.example .env
+# 编辑.env文件配置API端点
+npm start
+```
 
-6. **访问应用**
-   - 前端应用: http://localhost:3000
-   - 后端API: http://localhost:8000/api/
-   - API文档: http://localhost:8000/api/docs/
-   - 管理后台: http://localhost:8000/admin/
+### 4. AI代理设置
+
+```bash
+cd ai-news-agent
+pip install -r requirements.txt
+cp .env.example .env
+# 编辑.env文件配置OpenAI API密钥
+python start.py
+```
 
 ## 📖 使用指南
 
-### 获取API密钥
+### 基本功能
 
-1. 访问 [硅基流动官网](https://cloud.siliconflow.cn/)
-2. 注册账户并获取API密钥
-3. 将密钥填入 `.env` 文件的 `SILICONFLOW_API_KEY` 字段
+1. **用户注册/登录**: 访问前端应用进行用户注册和登录
+2. **新闻浏览**: 查看最新的AI相关新闻和分析
+3. **个性化设置**: 配置新闻偏好和推荐设置
+4. **数据分析**: 查看新闻趋势和统计数据
 
-### 基本操作
+### API文档
 
-1. **获取新闻**: 点击"获取新闻"按钮开始自动获取和分析新闻
-2. **查看统计**: 在仪表板查看新闻统计和趋势数据
-3. **搜索筛选**: 使用搜索框和筛选器查找特定新闻
-4. **查看详情**: 点击新闻标题查看完整内容和分析结果
+后端提供完整的RESTful API，主要端点包括：
 
-### API使用
-
-项目提供完整的RESTful API，支持：
-
-**新闻相关API**
+- `POST /api/auth/login/` - 用户登录
+- `POST /api/auth/register/` - 用户注册
 - `GET /api/news/` - 获取新闻列表
 - `GET /api/news/{id}/` - 获取新闻详情
-- `GET /api/news/stats/` - 获取统计数据
-- `POST /api/service/fetch_news/` - 触发新闻获取
-- `GET /api/service/fetch_status/` - 获取处理状态
+- `GET /api/analytics/` - 获取分析数据
 
-**用户认证API**
-- `POST /api/auth/register/` - 用户注册
-- `POST /api/auth/login/` - 用户登录
-- `POST /api/auth/logout/` - 用户登出
-- `POST /api/auth/token/refresh/` - 刷新访问令牌
-- `GET /api/auth/user/` - 获取当前用户信息
-- `PUT /api/auth/user/` - 更新用户资料
+详细API文档请参考 `docs/api.md`
 
-详细API文档请访问: http://localhost:8000/api/docs/
+## 🔧 配置说明
 
-## 🛠️ 开发指南
+### 环境变量
 
-### 项目结构
-
+**后端配置 (backend/.env)**
 ```
-ai_daily_news/
-├── backend/                 # Django后端
-│   ├── ai_news_backend/    # 项目配置
-│   ├── accounts/           # 用户认证应用
-│   │   ├── models.py       # 用户模型
-│   │   ├── views.py        # 认证API视图
-│   │   ├── serializers.py  # 用户序列化器
-│   │   └── urls.py         # 认证路由
-│   ├── news/               # 新闻应用
-│   │   ├── models.py       # 数据模型
-│   │   ├── views.py        # API视图
-│   │   ├── serializers.py  # 序列化器
-│   │   ├── services.py     # 业务逻辑
-│   │   └── pagination.py   # 分页配置
-│   └── requirements.txt    # Python依赖
-├── frontend/               # React前端
-│   ├── src/
-│   │   ├── components/     # React组件
-│   │   │   ├── Login.tsx   # 登录注册组件
-│   │   │   ├── UserProfile.tsx # 用户资料组件
-│   │   │   ├── NewsAnalytics.tsx # 新闻分析组件
-│   │   │   └── ...         # 其他组件
-│   │   ├── contexts/       # React上下文
-│   │   │   └── AuthContext.tsx # 认证上下文
-│   │   ├── services/       # API服务
-│   │   │   ├── authService.ts # 认证服务
-│   │   │   └── newsService.ts # 新闻服务
-│   │   └── types/          # TypeScript类型
-│   └── package.json        # Node.js依赖
-├── .env.example            # 环境变量模板
-├── .gitignore             # Git忽略文件
-├── CONTRIBUTING.md         # 贡献指南
-├── LICENSE                 # 开源许可证
-└── README.md              # 项目文档
+SECRET_KEY=your-secret-key
+DEBUG=True
+DATABASE_URL=sqlite:///db.sqlite3
+OPENAI_API_KEY=your-openai-api-key
 ```
 
-### 开发规范
-
-- **代码风格**: 遵循PEP 8 (Python) 和 ESLint (TypeScript)
-- **提交规范**: 使用语义化提交信息
-- **分支管理**: 使用Git Flow工作流
-- **测试覆盖**: 编写单元测试和集成测试
-
-### 扩展开发
-
-1. **添加新闻源**: 在 `backend/news/services.py` 中扩展新闻获取逻辑
-2. **自定义分析**: 修改AI分析提示词和处理逻辑
-3. **UI定制**: 在 `frontend/src/components/` 中添加新组件
-4. **API扩展**: 在 `backend/news/views.py` 中添加新的API端点
-
-## 🧪 测试
-
-### 后端测试
-```bash
-cd backend
-source venv/bin/activate
-python manage.py test
+**前端配置 (frontend/.env)**
+```
+REACT_APP_API_URL=http://localhost:8000/api
+REACT_APP_WS_URL=ws://localhost:8000/ws
 ```
 
-### 前端测试
-```bash
-cd frontend
-npm test
+**AI代理配置 (ai-news-agent/.env)**
 ```
-
-## 📦 部署
-
-### Docker部署 (推荐)
-
-```bash
-# 构建镜像
-docker-compose build
-
-# 启动服务
-docker-compose up -d
+OPENAI_API_KEY=your-openai-api-key
+RSS_SOURCES=source1.xml,source2.xml
+OUTPUT_DIR=./output
 ```
-
-### 传统部署
-
-1. **后端部署**
-   - 使用 Gunicorn + Nginx
-   - 配置PostgreSQL数据库
-   - 设置环境变量
-
-2. **前端部署**
-   - 构建生产版本: `npm run build`
-   - 部署到CDN或静态文件服务器
 
 ## 🤝 贡献指南
 
-我们欢迎所有形式的贡献！请遵循以下步骤：
+我们欢迎所有形式的贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详细的贡献指南。
 
-### 贡献流程
+### 开发流程
 
-1. **Fork项目** 到你的GitHub账户
-2. **创建特性分支** (`git checkout -b feature/AmazingFeature`)
-3. **提交更改** (`git commit -m 'Add some AmazingFeature'`)
-4. **推送分支** (`git push origin feature/AmazingFeature`)
-5. **创建Pull Request**
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
 
-### 贡献类型
+## 📝 许可证
 
-- 🐛 **Bug修复**: 修复现有功能的问题
-- ✨ **新功能**: 添加新的功能特性
-- 📚 **文档**: 改进项目文档
-- 🎨 **UI/UX**: 改进用户界面和体验
-- ⚡ **性能**: 优化性能和效率
-- 🧪 **测试**: 添加或改进测试用例
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
-### 代码规范
+## 📞 联系我们
 
-- 遵循现有的代码风格
-- 添加适当的注释和文档
-- 确保所有测试通过
-- 更新相关文档
-
-## 📄 许可证
-
-本项目采用 [MIT License](LICENSE) 开源许可证。
+- 项目主页: [GitHub Repository](https://github.com/your-username/ai_daily_news)
+- 问题反馈: [Issues](https://github.com/your-username/ai_daily_news/issues)
+- 邮箱: your-email@example.com
 
 ## 🙏 致谢
 
-- [硅基流动](https://cloud.siliconflow.cn/) - 提供AI服务支持
-- [Django](https://www.djangoproject.com/) - 强大的Python Web框架
-- [React](https://reactjs.org/) - 优秀的前端框架
-- [Ant Design](https://ant.design/) - 企业级UI设计语言
-
-## 📞 联系方式
-
-- **作者**: Dajucoder
-- **项目地址**: https://github.com/Dajucoder/ai_daily_news
-- **问题反馈**: [GitHub Issues](https://github.com/Dajucoder/ai_daily_news/issues)
+感谢所有为这个项目做出贡献的开发者和用户！
 
 ---
 
-⭐ 如果这个项目对你有帮助，请给它一个星标！
+⭐ 如果这个项目对你有帮助，请给我们一个星标！

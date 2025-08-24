@@ -287,9 +287,20 @@ const NewsList: React.FC = () => {
                           border: 'none',
                           color: 'white'
                         }}
+                        title={item.source_description}
                       >
                         {item.source}
                       </Tag>
+                      {item.tags && item.tags.length > 0 && item.tags.slice(0, 2).map((tag, index) => (
+                        <Tag key={index} color="geekblue" style={{ fontSize: '11px' }}>
+                          {tag}
+                        </Tag>
+                      ))}
+                      {item.tags && item.tags.length > 2 && (
+                        <Tag color="default" style={{ fontSize: '11px' }}>
+                          +{item.tags.length - 2}
+                        </Tag>
+                      )}
                     </Space>
                   </div>
                 }
@@ -388,11 +399,12 @@ const NewsList: React.FC = () => {
                   target="_blank" 
                   rel="noopener noreferrer"
                   style={{ color: '#1890ff', textDecoration: 'none' }}
+                  title={selectedNews.source_description}
                 >
                   <UserOutlined /> {selectedNews.source}
                 </a>
               ) : (
-                <Text type="secondary">
+                <Text type="secondary" title={selectedNews.source_description}>
                   <UserOutlined /> {selectedNews.source}
                 </Text>
               )}
@@ -414,6 +426,28 @@ const NewsList: React.FC = () => {
                     <li key={index}>{point}</li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {selectedNews.tags && selectedNews.tags.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <Title level={5}>标签</Title>
+                <Space wrap>
+                  {selectedNews.tags.map((tag, index) => (
+                    <Tag key={index} color="geekblue">
+                      {tag}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+
+            {selectedNews.source_description && (
+              <div style={{ marginBottom: '16px' }}>
+                <Title level={5}>来源信息</Title>
+                <Paragraph type="secondary">
+                  {selectedNews.source_description}
+                </Paragraph>
               </div>
             )}
 

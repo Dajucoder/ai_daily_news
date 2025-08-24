@@ -7,7 +7,7 @@ import {
   ReloadOutlined,
   TrophyOutlined
 } from '@ant-design/icons';
-import { NewsStats, FetchStatus } from '../types';
+import { NewsStats, FetchStatus, AgentStatus } from '../types';
 import { NewsService } from '../services/newsService';
 
 const { Title, Text } = Typography;
@@ -15,6 +15,7 @@ const { Title, Text } = Typography;
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<NewsStats | null>(null);
   const [fetchStatus, setFetchStatus] = useState<FetchStatus | null>(null);
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadStats = async () => {
@@ -35,26 +36,60 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleFetchNews = async () => {
+  const loadAgentStatus = async () => {
     try {
-      await NewsService.fetchNews({ force_refresh: false, max_news_count: 5 });
+      const data = await NewsService.getAgentStatus();
+      setAgentStatus(data);
+    } catch (error) {
+      console.error('获取AI代理状态失败:', error);
+    }
+  };
+
+  const handleFetchNews = async () => {
+    setLoading(true);
+    try {
+      await NewsService.fetchNews({ force_refresh: false, max_news_count: 10 });
       message.success('开始获取新闻');
       
       // 开始轮询状态
+      let pollCount = 0;
+      const maxPolls = 120; // 最多轮询2分钟 (120 * 1秒)
+      
       const interval = setInterval(async () => {
-        const status = await NewsService.getFetchStatus();
-        setFetchStatus(status);
-        
-        if (!status.is_fetching) {
-          clearInterval(interval);
-          loadStats(); // 重新加载统计信息
-          if (status.progress === 100) {
-            message.success(status.message);
+        try {
+          pollCount++;
+          const status = await NewsService.getFetchStatus();
+          setFetchStatus(status);
+          
+          // 检查是否完成或超时
+          if (!status.is_fetching || pollCount >= maxPolls) {
+            clearInterval(interval);
+            setLoading(false);
+            
+            if (pollCount >= maxPolls) {
+              message.warning('获取超时，请检查服务状态');
+            } else if (status.progress === 100) {
+              message.success(status.message || '新闻获取完成');
+            } else if (status.last_error) {
+              message.error(`获取失败: ${status.last_error}`);
+            }
+            
+            // 重新加载统计信息
+            loadStats();
+          }
+        } catch (error) {
+          console.error('轮询状态失败:', error);
+          // 轮询出错时不立即停止，给几次重试机会
+          if (pollCount >= maxPolls) {
+            clearInterval(interval);
+            setLoading(false);
+            message.error('无法获取状态，请检查服务连接');
           }
         }
       }, 1000);
       
     } catch (error: any) {
+      setLoading(false);
       message.error(error.response?.data?.error || '获取新闻失败');
     }
   };
@@ -62,7 +97,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([loadStats(), loadFetchStatus()]);
+      await Promise.all([loadStats(), loadFetchStatus(), loadAgentStatus()]);
       setLoading(false);
     };
     
@@ -166,14 +201,40 @@ const Dashboard: React.FC = () => {
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card title="分类统计">
+          <Card title="AI代理状态">
             <Space direction="vertical" style={{ width: '100%' }}>
-              {stats?.category_stats && Object.entries(stats.category_stats).map(([key, value]) => (
-                <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>{key}</Text>
-                  <Text strong>{value}</Text>
-                </div>
-              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text>服务状态:</Text>
+                <Text strong style={{ 
+                  color: agentStatus?.available ? '#52c41a' : '#ff4d4f' 
+                }}>
+                  {agentStatus?.available ? '✅ 在线' : '❌ 离线'}
+                </Text>
+              </div>
+              {agentStatus?.is_fetching && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Text>抓取进度:</Text>
+                    <Text strong>{agentStatus.progress || 0}%</Text>
+                  </div>
+                  <Progress 
+                    percent={agentStatus.progress || 0} 
+                    size="small"
+                    status="active"
+                  />
+                </>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text>状态信息:</Text>
+                <Text style={{ fontSize: '12px', color: '#666' }}>
+                  {agentStatus?.last_message || agentStatus?.message || '准备就绪'}
+                </Text>
+              </div>
+              {!agentStatus?.available && (
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  请确保AI新闻代理服务正在运行 (端口5001)
+                </Text>
+              )}
             </Space>
           </Card>
         </Col>

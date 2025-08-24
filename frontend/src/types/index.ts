@@ -2,12 +2,14 @@ export interface NewsItem {
   id: number;
   title: string;
   source: string;
+  source_description?: string;
   content: string;
   summary: string;
   url?: string;
   category: string;
   importance: 'high' | 'medium' | 'low';
   key_points: string[];
+  tags?: string[];
   timestamp: string;
   created_at: string;
   updated_at: string;
@@ -39,6 +41,16 @@ export interface FetchStatus {
   message: string;
   start_time?: string;
   estimated_completion?: string;
+  last_error?: string;
+}
+
+export interface AgentStatus {
+  available: boolean;
+  status: 'healthy' | 'unavailable' | 'error';
+  is_fetching?: boolean;
+  last_message?: string;
+  progress?: number;
+  message?: string;
 }
 
 export interface ApiResponse<T> {
