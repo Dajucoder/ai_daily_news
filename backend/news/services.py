@@ -126,7 +126,7 @@ class NewsAgentClient:
     def check_health(self) -> bool:
         """检查AI新闻代理服务健康状态"""
         try:
-            response = self.session.get(f"{self.base_url}/api/health", timeout=5)
+            response = self.session.get(f"{self.base_url}/api/health")
             return response.status_code == 200
         except:
             return False
@@ -312,15 +312,13 @@ class NewsService:
             self._record_fetch_history(0, 'failed', str(e))
             raise
     
-    def _wait_for_agent_completion(self, timeout: int = 300):
-        """等待AI代理完成抓取 - 严格版本，确保完全完成后才继续"""
-        start_time = time.time()
-        max_wait_time = 300  # 增加到5分钟等待时间
+    def _wait_for_agent_completion(self):
+        """等待AI代理完成抓取 - 无超时版本，确保完全完成后才继续"""
         check_interval = 2  # 每2秒检查一次
         
         self.logger.info("开始等待AI代理完成抓取...")
         
-        while time.time() - start_time < max_wait_time:
+        while True:
             try:
                 status = self.agent_client.get_fetch_status()
                 
@@ -329,9 +327,8 @@ class NewsService:
                 progress = status.get('progress', 0)
                 message = status.get('message', '等待AI代理完成...')
                 
-                # 更新Django后端的进度显示 (30-60%)
-                wait_progress = 30 + min(30, int((time.time() - start_time) / max_wait_time * 30))
-                self._update_status(wait_progress, f"AI代理: {message} ({progress}%)")
+                # 更新Django后端的进度显示
+                self._update_status(30 + min(60, progress), f"AI代理: {message} ({progress}%)")
                 
                 self.logger.info(f"AI代理状态: is_fetching={is_fetching}, progress={progress}%, message={message}")
                 
@@ -355,9 +352,6 @@ class NewsService:
                 # 出错时等待一下再重试，而不是立即退出
                 time.sleep(check_interval)
                 continue
-        
-        # 超时后记录日志但不抛出异常
-        self.logger.warning(f"等待AI代理完成超时 ({max_wait_time}秒)，继续执行后续步骤")
     
     def _save_agent_news_items(self, news_items: List[Dict[str, Any]]) -> int:
         """保存来自AI代理的新闻条目，如果链接相同但其他字段不同则覆盖更新"""

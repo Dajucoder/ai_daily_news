@@ -37,7 +37,7 @@ class RSSFetcher:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.session = requests.Session()
-        self.session.timeout = REQUEST_TIMEOUT
+        # 移除超时限制
         
         # 设置用户代理
         self.session.headers.update({

@@ -194,7 +194,7 @@ class AIProcessor:
                 self.client = OpenAI(
                     api_key=SILICONFLOW_API_KEY,
                     base_url=SILICONFLOW_BASE_URL,
-                    timeout=60
+                    timeout=None  # 移除超时限制
                 )
                 self.logger.info("OpenAI客户端初始化成功")
                 

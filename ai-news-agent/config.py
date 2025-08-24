@@ -55,7 +55,7 @@ SILICONFLOW_BASE_URL = "https://api.siliconflow.cn/v1"
 MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 
 # 请求配置
-REQUEST_TIMEOUT = 30
+REQUEST_TIMEOUT = None  # 无超时限制
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 
