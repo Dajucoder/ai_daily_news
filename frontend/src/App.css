@@ -1,0 +1,117 @@
+/* 全局样式 */
+.ant-layout {
+  min-height: 100vh;
+}
+
+.ant-layout-sider {
+  box-shadow: 2px 0 6px rgba(0, 21, 41, 0.35);
+}
+
+.ant-layout-header {
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+}
+
+/* 卡片样式 */
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 统计卡片 */
+.ant-statistic-title {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.65);
+  margin-bottom: 4px;
+}
+
+.ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 列表样式 */
+.ant-list-item {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ant-list-item:hover {
+  background-color: #fafafa;
+}
+
+.ant-list-item-meta-title {
+  margin-bottom: 8px;
+}
+
+.ant-list-item-meta-description {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+/* 标签样式 */
+.ant-tag {
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+/* 进度条样式 */
+.ant-progress-line {
+  margin-bottom: 8px;
+}
+
+/* 模态框样式 */
+.ant-modal-header {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 24px;
+}
+
+.ant-modal-body {
+  padding: 24px;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid #f0f0f0;
+  padding: 10px 16px;
+}
+
+/* 响应式样式 */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed !important;
+    height: 100vh;
+    z-index: 999;
+  }
+  
+  .ant-layout-content {
+    margin-left: 0 !important;
+  }
+  
+  .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .ant-statistic-content {
+    font-size: 20px;
+  }
+}
+
+/* 自定义工具类 */
+.text-center {
+  text-align: center;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mb-24 {
+  margin-bottom: 24px;
+}
+
+.full-width {
+  width: 100%;
+}
