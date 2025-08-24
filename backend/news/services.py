@@ -150,24 +150,35 @@ class NewsContentGenerator:
     
     def generate_mock_content(self, topic: str) -> str:
         """生成模拟新闻内容"""
-        return f"""
-        关于"{topic}"的最新资讯：
-        
-        据最新报道，{topic}领域出现了重要进展。业内专家表示，这一发展将对AI行业产生深远影响。
-        
-        主要亮点包括：
-        1. 技术创新突破了传统限制
-        2. 应用场景得到进一步拓展  
-        3. 产业化进程明显加速
-        4. 相关标准和规范正在完善
-        
-        多家知名科技公司已经开始布局相关技术，预计未来6个月内将有更多产品和服务推出。
-        
-        行业分析师认为，这一趋势将推动整个AI生态系统的发展，为用户带来更好的体验。
-        
-        该技术的应用前景广阔，预计将在教育、医疗、金融、制造等多个领域产生重要影响。
-        相关企业和研究机构正在加大投入，推动技术的进一步发展和商业化应用。
-        """
+        return f"""关于"{topic}"的最新资讯：
+
+据最新报道，{topic}领域出现了重要进展。业内专家表示，这一发展将对AI行业产生深远影响。
+
+主要亮点包括：
+1. 技术创新突破了传统限制
+2. 应用场景得到进一步拓展  
+3. 产业化进程明显加速
+4. 相关标准和规范正在完善
+
+技术细节分析：
+{topic}技术的核心优势在于其创新的算法架构和高效的处理能力。与传统方法相比，新技术在准确性、速度和资源消耗方面都有显著改善。
+
+行业影响：
+多家知名科技公司已经开始布局相关技术，包括谷歌、微软、OpenAI等行业巨头。预计未来6个月内将有更多产品和服务推出。
+
+专家观点：
+行业分析师认为，这一趋势将推动整个AI生态系统的发展，为用户带来更好的体验。同时，这也将促进相关产业链的发展，创造更多就业机会。
+
+应用前景：
+该技术的应用前景广阔，预计将在以下领域产生重要影响：
+- 教育领域：个性化学习和智能辅导
+- 医疗领域：精准诊断和治疗方案优化
+- 金融领域：风险评估和智能投顾
+- 制造领域：智能制造和质量控制
+- 服务领域：客户服务和智能推荐
+
+未来展望：
+相关企业和研究机构正在加大投入，推动技术的进一步发展和商业化应用。预计在未来2-3年内，该技术将实现大规模商用，为社会创造巨大价值。"""
 
 
 class NewsService:
@@ -268,7 +279,7 @@ class NewsService:
                         category=analysis.get('category', 'other'),
                         importance=analysis.get('importance', 'medium'),
                         key_points=analysis.get('key_points', []),
-                        url=f"https://example.com/news/{i+1}"
+                        url=f"https://ai-tech-news.com/article/{topic.replace(' ', '-').lower()}-{i+1}"
                     )
                     
                     news_items.append(news_data)
@@ -334,18 +345,15 @@ class NewsService:
         try:
             today = timezone.now().date()
             
-            # 更新或创建历史记录
-            history, created = FetchHistory.objects.update_or_create(
+            # 直接创建新记录（现在没有unique_together约束了）
+            history = FetchHistory.objects.create(
                 fetch_date=today,
-                defaults={
-                    'news_count': news_count,
-                    'status': status,
-                    'log_message': log_message
-                }
+                news_count=news_count,
+                status=status,
+                log_message=log_message
             )
             
-            action = "创建" if created else "更新"
-            self.logger.info(f"{action}获取历史记录: {history}")
+            self.logger.info(f"创建获取历史记录: {history}")
             
         except Exception as e:
             self.logger.error(f"记录获取历史失败: {str(e)}")

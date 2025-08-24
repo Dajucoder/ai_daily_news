@@ -63,3 +63,44 @@ export const IMPORTANCE_LABELS: Record<string, string> = {
   medium: '中',
   low: '低',
 };
+
+// 用户相关类型
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  avatar?: string;
+  bio?: string;
+  phone?: string;
+  date_joined: string;
+  profile?: UserProfile;
+}
+
+export interface UserProfile {
+  theme: 'light' | 'dark';
+  language: 'zh-cn' | 'en';
+  notifications_enabled: boolean;
+  email_notifications: boolean;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
+}
+
+export interface RegisterData {
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  password: string;
+  password_confirm: string;
+}

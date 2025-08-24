@@ -13,6 +13,7 @@ from .serializers import (
     FetchStatusSerializer
 )
 from .services import NewsService
+from .pagination import DynamicPageNumberPagination
 
 
 @extend_schema_view(
@@ -27,6 +28,7 @@ class NewsItemViewSet(viewsets.ModelViewSet):
     
     queryset = NewsItem.objects.all()
     permission_classes = [AllowAny]
+    pagination_class = DynamicPageNumberPagination
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -128,6 +130,7 @@ class FetchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = FetchHistory.objects.all()
     serializer_class = FetchHistorySerializer
     permission_classes = [AllowAny]
+    pagination_class = DynamicPageNumberPagination
     
     def get_queryset(self):
         queryset = FetchHistory.objects.all()
@@ -195,17 +198,18 @@ class NewsServiceViewSet(viewsets.ViewSet):
                 status=status.HTTP_409_CONFLICT
             )
         
-        # 检查今日是否已获取（除非强制刷新）
-        if not force_refresh:
-            today = timezone.now().date()
-            if FetchHistory.objects.filter(
-                fetch_date=today, 
-                status='success'
-            ).exists():
-                return Response(
-                    {'message': '今日已获取新闻，如需重新获取请设置force_refresh=true'},
-                    status=status.HTTP_200_OK
-                )
+        # 移除每日限制，允许随时刷新
+        # 注释掉原来的每日限制逻辑
+        # if not force_refresh:
+        #     today = timezone.now().date()
+        #     if FetchHistory.objects.filter(
+        #         fetch_date=today, 
+        #         status='success'
+        #     ).exists():
+        #         return Response(
+        #             {'message': '今日已获取新闻，如需重新获取请设置force_refresh=true'},
+        #             status=status.HTTP_200_OK
+        #         )
         
         # 启动后台获取任务
         try:

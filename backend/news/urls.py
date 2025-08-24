@@ -9,5 +9,5 @@ router.register(r'config', SystemConfigViewSet)
 router.register(r'service', NewsServiceViewSet, basename='news-service')
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]

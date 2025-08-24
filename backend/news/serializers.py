@@ -16,13 +16,14 @@ class NewsItemSerializer(serializers.ModelSerializer):
 
 
 class NewsItemListSerializer(serializers.ModelSerializer):
-    """新闻条目列表序列化器（简化版）"""
+    """新闻条目列表序列化器（包含完整字段）"""
     
     class Meta:
         model = NewsItem
         fields = [
-            'id', 'title', 'source', 'summary', 'category',
-            'importance', 'timestamp', 'created_at'
+            'id', 'title', 'source', 'content', 'summary', 'url',
+            'category', 'importance', 'key_points', 'timestamp',
+            'created_at', 'updated_at'
         ]
 
 

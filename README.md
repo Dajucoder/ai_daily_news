@@ -30,13 +30,27 @@
 - **全文搜索**: 支持标题和内容的全文搜索
 - **智能排序**: 按时间、重要性等多种方式排序
 
+### 👤 用户管理系统
+- **用户注册登录**: 完整的用户认证系统，支持JWT令牌认证
+- **个人资料管理**: 用户可以管理头像、个人简介等信息
+- **个性化设置**: 支持主题切换、语言设置、通知偏好等
+- **权限控制**: 基于角色的访问控制，保护敏感功能
+
+### 📈 数据分析与推荐
+- **新闻分析**: 深度分析新闻趋势和热点话题
+- **个性化推荐**: 基于用户行为的智能新闻推荐
+- **获取历史**: 完整的新闻获取历史记录和统计
+- **系统设置**: 灵活的系统配置和管理功能
+
 ## 🏗️ 技术架构
 
 ### 后端技术栈
 - **框架**: Django 5.2 + Django REST Framework
+- **认证系统**: Django REST Framework SimpleJWT
 - **数据库**: SQLite (可扩展至PostgreSQL/MySQL)
 - **AI服务**: 硅基流动 (SiliconFlow) API
 - **API文档**: Swagger/OpenAPI 3.0
+- **跨域处理**: django-cors-headers
 
 ### 前端技术栈
 - **框架**: React 18 + TypeScript
@@ -134,11 +148,20 @@
 
 项目提供完整的RESTful API，支持：
 
+**新闻相关API**
 - `GET /api/news/` - 获取新闻列表
 - `GET /api/news/{id}/` - 获取新闻详情
 - `GET /api/news/stats/` - 获取统计数据
 - `POST /api/service/fetch_news/` - 触发新闻获取
 - `GET /api/service/fetch_status/` - 获取处理状态
+
+**用户认证API**
+- `POST /api/auth/register/` - 用户注册
+- `POST /api/auth/login/` - 用户登录
+- `POST /api/auth/logout/` - 用户登出
+- `POST /api/auth/token/refresh/` - 刷新访问令牌
+- `GET /api/auth/user/` - 获取当前用户信息
+- `PUT /api/auth/user/` - 更新用户资料
 
 详细API文档请访问: http://localhost:8000/api/docs/
 
@@ -150,20 +173,36 @@
 ai_daily_news/
 ├── backend/                 # Django后端
 │   ├── ai_news_backend/    # 项目配置
+│   ├── accounts/           # 用户认证应用
+│   │   ├── models.py       # 用户模型
+│   │   ├── views.py        # 认证API视图
+│   │   ├── serializers.py  # 用户序列化器
+│   │   └── urls.py         # 认证路由
 │   ├── news/               # 新闻应用
 │   │   ├── models.py       # 数据模型
 │   │   ├── views.py        # API视图
 │   │   ├── serializers.py  # 序列化器
-│   │   └── services.py     # 业务逻辑
+│   │   ├── services.py     # 业务逻辑
+│   │   └── pagination.py   # 分页配置
 │   └── requirements.txt    # Python依赖
 ├── frontend/               # React前端
 │   ├── src/
 │   │   ├── components/     # React组件
+│   │   │   ├── Login.tsx   # 登录注册组件
+│   │   │   ├── UserProfile.tsx # 用户资料组件
+│   │   │   ├── NewsAnalytics.tsx # 新闻分析组件
+│   │   │   └── ...         # 其他组件
+│   │   ├── contexts/       # React上下文
+│   │   │   └── AuthContext.tsx # 认证上下文
 │   │   ├── services/       # API服务
+│   │   │   ├── authService.ts # 认证服务
+│   │   │   └── newsService.ts # 新闻服务
 │   │   └── types/          # TypeScript类型
 │   └── package.json        # Node.js依赖
 ├── .env.example            # 环境变量模板
 ├── .gitignore             # Git忽略文件
+├── CONTRIBUTING.md         # 贡献指南
+├── LICENSE                 # 开源许可证
 └── README.md              # 项目文档
 ```
 

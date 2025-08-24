@@ -19,7 +19,9 @@ import {
   EyeOutlined, 
   LinkOutlined,
   CalendarOutlined,
-  UserOutlined
+  UserOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { NewsItem, CATEGORY_LABELS, IMPORTANCE_LABELS } from '../types';
 import { NewsService } from '../services/newsService';
@@ -33,7 +35,7 @@ const NewsList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(5);
   const [filters, setFilters] = useState({
     search: '',
     category: '',
@@ -56,8 +58,24 @@ const NewsList: React.FC = () => {
       setNews(response.results || []);
       setTotal(response.count || 0);
       setCurrentPage(page);
-    } catch (error) {
-      message.error('获取新闻列表失败');
+    } catch (error: any) {
+      console.error('获取新闻列表失败:', error);
+      
+      // 如果是分页错误，重置到第1页
+      if (error.response?.status === 404 && page > 1) {
+        message.warning('该页面不存在，已跳转到第一页');
+        loadNews(1);
+        return;
+      }
+      
+      // 其他错误
+      const errorMessage = error.response?.data?.detail || error.message || '获取新闻列表失败';
+      message.error(errorMessage);
+      
+      // 如果当前页大于1且出错，尝试回到第1页
+      if (page > 1) {
+        setCurrentPage(1);
+      }
     } finally {
       setLoading(false);
     }
@@ -82,6 +100,26 @@ const NewsList: React.FC = () => {
   const showNewsDetail = (item: NewsItem) => {
     setSelectedNews(item);
     setModalVisible(true);
+  };
+
+  const handleDeleteNews = (newsId: number) => {
+    Modal.confirm({
+      title: '确认删除',
+      icon: <ExclamationCircleOutlined />,
+      content: '确定要删除这条新闻吗？此操作不可恢复。',
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      async onOk() {
+        try {
+          await NewsService.deleteNews(newsId);
+          message.success('新闻删除成功');
+          loadNews(currentPage); // 重新加载当前页
+        } catch (error) {
+          message.error('删除新闻失败');
+        }
+      },
+    });
   };
 
   const getImportanceColor = (importance: string) => {
@@ -193,37 +231,101 @@ const NewsList: React.FC = () => {
                   >
                     原文链接
                   </Button>
-                )
+                ),
+                <Button 
+                  type="link" 
+                  icon={<DeleteOutlined />}
+                  danger
+                  onClick={() => handleDeleteNews(item.id)}
+                >
+                  删除
+                </Button>
               ].filter(Boolean)}
+              style={{
+                padding: '20px 24px',
+                borderRadius: '8px',
+                marginBottom: '8px',
+                background: '#fff',
+                border: '1px solid #f0f0f0',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.borderColor = '#1890ff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.borderColor = '#f0f0f0';
+              }}
             >
               <List.Item.Meta
                 title={
-                  <Space>
-                    <Text strong style={{ fontSize: '16px' }}>{item.title}</Text>
-                    <Tag color={getImportanceColor(item.importance)}>
-                      {IMPORTANCE_LABELS[item.importance]}
-                    </Tag>
-                    <Tag color={getCategoryColor(item.category)}>
-                      {CATEGORY_LABELS[item.category]}
-                    </Tag>
-                  </Space>
+                  <div style={{ marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                      <Text strong style={{ fontSize: '18px', color: '#262626' }}>{item.title}</Text>
+                    </div>
+                    <Space size="small" wrap>
+                      <Tag 
+                        color={getImportanceColor(item.importance)}
+                        style={{ fontWeight: 'bold', fontSize: '12px' }}
+                      >
+                        {IMPORTANCE_LABELS[item.importance]}
+                      </Tag>
+                      <Tag 
+                        color={getCategoryColor(item.category)}
+                        style={{ fontSize: '12px' }}
+                      >
+                        {CATEGORY_LABELS[item.category]}
+                      </Tag>
+                      <Tag 
+                        icon={<UserOutlined />}
+                        color="blue"
+                        style={{ 
+                          fontSize: '12px', 
+                          fontWeight: 'bold',
+                          background: 'linear-gradient(135deg, #1890ff, #40a9ff)',
+                          border: 'none',
+                          color: 'white'
+                        }}
+                      >
+                        {item.source}
+                      </Tag>
+                    </Space>
+                  </div>
                 }
                 description={
                   <div>
                     <Paragraph 
                       ellipsis={{ rows: 2, expandable: false }}
-                      style={{ marginBottom: '8px' }}
+                      style={{ 
+                        marginBottom: '12px',
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        color: '#595959'
+                      }}
                     >
                       {item.summary}
                     </Paragraph>
-                    <Space size="large">
-                      <Text type="secondary">
-                        <UserOutlined /> {item.source}
-                      </Text>
-                      <Text type="secondary">
-                        <CalendarOutlined /> {new Date(item.timestamp).toLocaleString()}
-                      </Text>
-                    </Space>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      paddingTop: '8px',
+                      borderTop: '1px solid #f0f0f0'
+                    }}>
+                      <Space size="large">
+                        <Text type="secondary" style={{ fontSize: '13px' }}>
+                          <CalendarOutlined style={{ marginRight: '4px' }} />
+                          {new Date(item.timestamp).toLocaleString()}
+                        </Text>
+                        {item.url && (
+                          <Text type="secondary" style={{ fontSize: '13px' }}>
+                            <LinkOutlined style={{ marginRight: '4px' }} />
+                            来源链接可用
+                          </Text>
+                        )}
+                      </Space>
+                    </div>
                   </div>
                 }
               />
@@ -280,9 +382,20 @@ const NewsList: React.FC = () => {
               <Tag color={getCategoryColor(selectedNews.category)}>
                 {CATEGORY_LABELS[selectedNews.category]}
               </Tag>
-              <Text type="secondary">
-                <UserOutlined /> {selectedNews.source}
-              </Text>
+              {selectedNews.url ? (
+                <a 
+                  href={selectedNews.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#1890ff', textDecoration: 'none' }}
+                >
+                  <UserOutlined /> {selectedNews.source}
+                </a>
+              ) : (
+                <Text type="secondary">
+                  <UserOutlined /> {selectedNews.source}
+                </Text>
+              )}
               <Text type="secondary">
                 <CalendarOutlined /> {new Date(selectedNews.timestamp).toLocaleString()}
               </Text>

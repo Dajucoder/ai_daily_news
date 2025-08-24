@@ -79,8 +79,8 @@ class FetchHistory(models.Model):
     class Meta:
         verbose_name = '获取历史'
         verbose_name_plural = '获取历史'
-        ordering = ['-fetch_date', '-created_at']
-        unique_together = ['fetch_date']
+        ordering = ['-created_at', '-fetch_date']
+        # 移除 unique_together 约束，允许同一天有多次获取记录
     
     def __str__(self):
         return f"{self.fetch_date} - {self.get_status_display()}"
