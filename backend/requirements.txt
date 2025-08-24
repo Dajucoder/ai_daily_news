@@ -1,0 +1,7 @@
+Django==5.2.5
+djangorestframework==3.16.1
+django-cors-headers==4.7.0
+python-dotenv==1.1.1
+openai==1.101.0
+requests==2.32.5
+drf-spectacular==0.27.2
