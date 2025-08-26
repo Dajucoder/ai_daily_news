@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# IDE
+.idea
+.vscode
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+
+# Node
+node_modules/
+npm-debug.log
+.npm
+yarn-error.log
+
+# Django
+*.log
+db.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
