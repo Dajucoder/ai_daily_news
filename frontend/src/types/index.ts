@@ -115,3 +115,135 @@ export interface RegisterData {
   password: string;
   password_confirm: string;
 }
+
+// 聊天相关类型
+export interface ChatMessage {
+  id: number;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  token_count?: number;
+  thinking?: string; // AI思考过程
+  model_name?: string; // 使用的模型名称
+  model_provider?: string; // 模型提供商
+}
+
+export interface Conversation {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+  messages?: ChatMessage[];
+  message_count?: number;
+  last_message?: {
+    content: string;
+    role: string;
+    timestamp: string;
+  };
+}
+
+export interface ChatSettings {
+  default_provider?: number;
+  default_provider_name?: string;
+  default_model?: number;
+  default_model_name?: string;
+  max_tokens: number;
+  temperature: number;
+  system_prompt: string;
+}
+
+export interface SendMessageRequest {
+  conversation_id?: number;
+  message: string;
+}
+
+export interface SendMessageResponse {
+  message: ChatMessage;
+  conversation_id: number;
+}
+
+export interface CreateConversationRequest {
+  title: string;
+  first_message?: string;
+}
+
+// AI配置相关类型
+export interface AIProvider {
+  id: number;
+  name: string;
+  provider_type: 'openai' | 'siliconflow' | 'freegpt' | 'qwen' | 'gemini' | 'claude' | 'custom';
+  api_key?: string;
+  api_base_url: string;
+  is_active: boolean;
+  is_default: boolean;
+  models_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIModel {
+  id: number;
+  provider: number;
+  provider_name: string;
+  model_id: string;
+  model_name: string;
+  description?: string;
+  max_tokens: number;
+  support_functions: boolean;
+  support_vision: boolean;
+  input_price?: number;
+  output_price?: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AIProviderForm {
+  name: string;
+  provider_type: string;
+  api_key?: string;  // 编辑时可选
+  api_base_url: string;
+  is_active: boolean;
+  is_default: boolean;
+}
+
+export interface AIModelForm {
+  provider: number;
+  model_id: string;
+  model_name: string;
+  description?: string;
+  max_tokens: number;
+  support_functions: boolean;
+  support_vision: boolean;
+  input_price?: number;
+  output_price?: number;
+  is_active: boolean;
+}
+
+export interface TestConnectionRequest {
+  api_key: string;
+  api_base_url: string;
+  test_model?: string;
+}
+
+export interface TestConnectionResponse {
+  success: boolean;
+  message: string;
+  model_used?: string;
+}
+
+export interface DetectModelsRequest {
+  provider_id: number;
+}
+
+export interface DetectModelsResponse {
+  success: boolean;
+  models: Array<{
+    model_id: string;
+    model_name: string;
+    description: string;
+    created?: number;
+  }>;
+  count: number;
+  message?: string;
+}

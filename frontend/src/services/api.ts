@@ -2,6 +2,16 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+// 头像URL处理函数
+export const getAvatarUrl = (avatar?: string): string | undefined => {
+  if (!avatar) return undefined;
+  // 如果已经是完整URL，直接返回
+  if (avatar.startsWith('http')) return avatar;
+  // 如果是相对路径，添加后端URL
+  const cleanPath = avatar.startsWith('/') ? avatar : `/${avatar}`;
+  return `http://localhost:8000${cleanPath}`;
+};
+
 // 设置上海时区
 const SHANGHAI_TIMEZONE = 'Asia/Shanghai';
 

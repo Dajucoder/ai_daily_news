@@ -9,9 +9,12 @@ import {
   UserOutlined,
   LogoutOutlined,
   StarOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  MessageOutlined,
+  ApiOutlined
 } from '@ant-design/icons';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { getAvatarUrl } from './services/api';
 import Dashboard from './components/Dashboard';
 import NewsList from './components/NewsList';
 import FetchHistory from './components/FetchHistory';
@@ -20,6 +23,8 @@ import Login from './components/Login';
 import UserProfile from './components/UserProfile';
 import NewsRecommendations from './components/NewsRecommendations';
 import NewsAnalytics from './components/NewsAnalytics';
+import Chat from './components/Chat';
+import AIConfig from './components/AIConfig';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -45,6 +50,18 @@ const AppContent: React.FC = () => {
       icon: <FileTextOutlined />,
       label: '新闻列表',
       path: '/news'
+    },
+    {
+      key: 'chat',
+      icon: <MessageOutlined />,
+      label: 'AI聊天',
+      path: '/chat'
+    },
+    {
+      key: 'ai-config',
+      icon: <ApiOutlined />,
+      label: 'AI配置',
+      path: '/ai-config'
     },
     {
       key: 'recommendations',
@@ -226,7 +243,7 @@ const AppContent: React.FC = () => {
                 <Space>
                   <Avatar 
                     size="small" 
-                    src={user?.avatar} 
+                    src={getAvatarUrl(user?.avatar)} 
                     icon={<UserOutlined />}
                     style={{ 
                       background: 'linear-gradient(135deg, #1890ff, #722ed1)',
@@ -250,6 +267,8 @@ const AppContent: React.FC = () => {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/news" element={<NewsList />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/ai-config" element={<AIConfig />} />
             <Route path="/recommendations" element={<NewsRecommendations />} />
             <Route path="/analytics" element={<NewsAnalytics />} />
             <Route path="/history" element={<FetchHistory />} />

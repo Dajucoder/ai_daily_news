@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -19,6 +17,7 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
+      - media_files:/app/media
     ports:
       - "8000:8000"
     env_file:
@@ -27,8 +26,17 @@ services:
       - db
     command: >
       sh -c "python manage.py migrate &&
-             gunicorn ai_news_backend.wsgi:application --bind 0.0.0.0:8000"
+             python manage.py collectstatic --noinput &&
+             python create_superuser.py &&
+             python manage.py runserver 0.0.0.0:8000"
     restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      - SILICONFLOW_BASE_URL=${SILICONFLOW_BASE_URL:-https://api.siliconflow.cn/v1}
+      - MODEL_NAME=${MODEL_NAME:-Qwen/Qwen2.5-7B-Instruct}
+      - DJANGO_LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
 
   frontend:
     build: ./frontend
@@ -40,6 +48,9 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - GENERATE_SOURCEMAP=false
 
   agent:
     build: ./ai-news-agent
@@ -53,6 +64,11 @@ services:
       - backend
     command: python api_server.py
     restart: unless-stopped
+    environment:
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      - SILICONFLOW_BASE_URL=${SILICONFLOW_BASE_URL:-https://api.siliconflow.cn/v1}
+      - MODEL_NAME=${MODEL_NAME:-Qwen/Qwen2.5-7B-Instruct}
 
 volumes:
   postgres_data:
+  media_files:

@@ -8,6 +8,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/news/', include('news.urls')),
     path('api/auth/', include('accounts.urls')),
+    path('api/chat/', include('chat.urls')),
     
     # API文档
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

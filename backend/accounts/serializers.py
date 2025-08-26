@@ -15,12 +15,25 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """用户序列化器"""
     profile = UserProfileSerializer(read_only=True)
+    avatar = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 
                   'avatar', 'bio', 'phone', 'date_joined', 'profile']
         read_only_fields = ['id', 'date_joined']
+    
+    def get_avatar(self, obj):
+        """获取头像URL"""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                # 在Docker环境中，使用容器名访问
+                if 'localhost' in request.get_host() or '127.0.0.1' in request.get_host():
+                    return f"http://localhost:8000{obj.avatar.url}"
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

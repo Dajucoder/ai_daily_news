@@ -30,6 +30,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import authService, { UserStats } from '../services/authService';
+import { getAvatarUrl } from '../services/api';
 import { User } from '../types';
 
 const { Title, Text, Paragraph } = Typography;
@@ -37,7 +38,7 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 const UserProfile: React.FC = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, refreshUser } = useAuth();
   const [editMode, setEditMode] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -130,7 +131,7 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleAvatarChange = (info: any) => {
+  const handleAvatarChange = async (info: any) => {
     if (info.file.status === 'uploading') {
       setLoading(true);
       return;
@@ -141,9 +142,14 @@ const UserProfile: React.FC = () => {
       const imageUrl = info.file.response?.url;
       
       if (imageUrl) {
-        // 头像已通过API上传成功，刷新用户信息
-        loadUserStats();
-        message.success('头像上传成功');
+        try {
+          // 头像已通过API上传成功，刷新用户信息
+          await refreshUser();
+          message.success('头像上传成功');
+        } catch (error) {
+          console.error('刷新用户信息失败:', error);
+          message.success('头像上传成功，请刷新页面查看');
+        }
       } else {
         message.error('头像上传失败：未获取到图片URL');
       }
@@ -197,7 +203,7 @@ const UserProfile: React.FC = () => {
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <Avatar
                   size={120}
-                  src={user.avatar}
+                  src={getAvatarUrl(user.avatar)}
                   icon={<UserOutlined />}
                   style={{
                     border: '4px solid #f0f0f0',
