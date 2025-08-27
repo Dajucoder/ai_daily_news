@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Card, Typography, Button, Collapse } from 'antd';
+import { Card, Typography, Button } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined, BulbOutlined } from '@ant-design/icons';
 import MarkdownMessage from './MarkdownMessage';
 
-const { Text, Paragraph } = Typography;
-const { Panel } = Collapse;
+const { Text } = Typography;
 
 interface ThinkingProcessProps {
   thinking: string;

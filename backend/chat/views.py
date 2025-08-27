@@ -358,35 +358,95 @@ def test_api_connection(request):
     try:
         import openai
         
-        api_key = serializer.validated_data['api_key']
+        api_key = serializer.validated_data.get('api_key', '')
         api_base_url = serializer.validated_data['api_base_url']
         test_model = serializer.validated_data.get('test_model', 'gpt-3.5-turbo')
         
-        # 创建临时客户端测试连接
+        # 判断是否为本地服务（如 Ollama）
+        is_local_service = (
+            'localhost' in api_base_url.lower() or 
+            '127.0.0.1' in api_base_url or 
+            'ollama' in api_base_url.lower() or
+            not api_key or not api_key.strip()
+        )
+        
+        # 为本地服务使用虚拟API key，为远程服务验证API key
+        if is_local_service:
+            effective_api_key = "dummy-key-for-local-service"
+        else:
+            if not api_key or not api_key.strip():
+                return Response({
+                    'success': False,
+                    'message': '远程API服务需要提供有效的API密钥'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            effective_api_key = api_key
+        
+        # 创建临时客户端测试连接，设置超时时间
         client = openai.OpenAI(
-            api_key=api_key,
-            base_url=api_base_url
+            api_key=effective_api_key,
+            base_url=api_base_url,
+            timeout=30.0  # 30秒超时
         )
         
         # 发送测试请求
-        response = client.chat.completions.create(
-            model=test_model,
-            messages=[{'role': 'user', 'content': 'test'}],
-            max_tokens=1,
-            timeout=10
-        )
-        
-        return Response({
-            'success': True,
-            'message': 'API连接测试成功',
-            'model_used': test_model
-        })
+        try:
+            response = client.chat.completions.create(
+                model=test_model,
+                messages=[{'role': 'user', 'content': 'Hello'}],
+                max_tokens=10,
+                temperature=0.1
+            )
+            
+            service_type = "本地服务" if is_local_service else "远程API服务"
+            
+            return Response({
+                'success': True,
+                'message': f'{service_type}连接测试成功',
+                'model_used': test_model,
+                'service_type': service_type,
+                'response_preview': response.choices[0].message.content[:50] if response.choices else 'No response'
+            })
+            
+        except openai.APIConnectionError as e:
+            return Response({
+                'success': False,
+                'message': f'无法连接到API服务: {str(e)}。请检查API地址是否正确，网络连接是否正常。'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except openai.AuthenticationError as e:
+            if is_local_service:
+                return Response({
+                    'success': False,
+                    'message': f'本地服务认证失败: {str(e)}。请确认本地服务（如Ollama）正在运行。'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    'success': False,
+                    'message': f'API认证失败: {str(e)}。请检查API密钥是否正确。'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except openai.APITimeoutError as e:
+            return Response({
+                'success': False,
+                'message': f'API请求超时: {str(e)}。请稍后重试或检查网络连接。'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except openai.BadRequestError as e:
+            return Response({
+                'success': False,
+                'message': f'请求参数错误: {str(e)}。请检查模型名称是否正确。'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'API调用失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"API连接测试失败: {str(e)}")
         return Response({
             'success': False,
             'message': f'API连接测试失败: {str(e)}'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @extend_schema(
@@ -407,31 +467,107 @@ def detect_models(request):
         provider_id = serializer.validated_data['provider_id']
         provider = AIProvider.objects.get(id=provider_id, user=request.user)
         
+        # 验证API地址
+        if not provider.api_base_url or not provider.api_base_url.strip():
+            return Response({
+                'success': False,
+                'message': 'API地址未配置或为空，请先配置有效的API地址'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 判断是否为本地服务（如 Ollama）
+        is_local_service = (
+            'localhost' in provider.api_base_url.lower() or 
+            '127.0.0.1' in provider.api_base_url or 
+            'ollama' in provider.api_base_url.lower() or
+            not provider.api_key or not provider.api_key.strip()
+        )
+        
+        # 为本地服务使用虚拟API key，为远程服务验证API key
+        if is_local_service:
+            effective_api_key = "dummy-key-for-local-service"
+        else:
+            if not provider.api_key or not provider.api_key.strip():
+                return Response({
+                    'success': False,
+                    'message': '远程API服务需要提供有效的API密钥'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            effective_api_key = provider.api_key
+        
         import openai
         
-        # 创建客户端
+        # 创建客户端，设置较短的超时时间
         client = openai.OpenAI(
-            api_key=provider.api_key,
-            base_url=provider.api_base_url
+            api_key=effective_api_key,
+            base_url=provider.api_base_url,
+            timeout=30.0  # 30秒超时
         )
         
         # 获取模型列表
-        models_response = client.models.list()
-        detected_models = []
-        
-        for model in models_response.data:
-            detected_models.append({
-                'model_id': model.id,
-                'model_name': model.id,
-                'description': f'检测到的模型: {model.id}',
-                'created': getattr(model, 'created', None)
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            logger.info(f"开始检测模型 - 提供商: {provider.name}, API地址: {provider.api_base_url}")
+            
+            models_response = client.models.list()
+            detected_models = []
+            
+            for model in models_response.data:
+                detected_models.append({
+                    'model_id': model.id,
+                    'model_name': model.id,
+                    'description': f'检测到的模型: {model.id}',
+                    'created': getattr(model, 'created', None)
+                })
+            
+            logger.info(f"成功检测到 {len(detected_models)} 个模型")
+            
+            return Response({
+                'success': True,
+                'models': detected_models,
+                'count': len(detected_models),
+                'message': f'成功检测到 {len(detected_models)} 个模型'
             })
-        
-        return Response({
-            'success': True,
-            'models': detected_models,
-            'count': len(detected_models)
-        })
+            
+        except openai.APIConnectionError as e:
+            logger.error(f"API连接错误: {str(e)}")
+            # 如果是网络连接问题，提供一个模拟的模型列表
+            if is_local_service:
+                # 为本地服务提供常见的模型列表
+                fallback_models = [
+                    {'model_id': 'llama2', 'model_name': 'Llama 2', 'description': '本地Llama 2模型'},
+                    {'model_id': 'llama2:7b', 'model_name': 'Llama 2 7B', 'description': '本地Llama 2 7B模型'},
+                    {'model_id': 'codellama', 'model_name': 'Code Llama', 'description': '本地Code Llama模型'},
+                ]
+                return Response({
+                    'success': True,
+                    'models': fallback_models,
+                    'count': len(fallback_models),
+                    'message': f'无法连接到本地服务，返回常见模型列表。请确保本地服务正在运行。'
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'message': f'无法连接到API服务: {str(e)}。请检查网络连接或稍后重试。'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except openai.AuthenticationError as e:
+            logger.error(f"API认证错误: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'API认证失败: {str(e)}。请检查API密钥是否正确。'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except openai.APITimeoutError as e:
+            logger.error(f"API超时错误: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'API请求超时: {str(e)}。请稍后重试或检查网络连接。'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"未知错误: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'API调用失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
     except AIProvider.DoesNotExist:
         return Response({
@@ -439,10 +575,13 @@ def detect_models(request):
             'message': 'AI提供商不存在'
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"模型检测失败: {str(e)}")
         return Response({
             'success': False,
             'message': f'模型检测失败: {str(e)}'
-        }, status=status.HTTP_400_BAD_REQUEST)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])

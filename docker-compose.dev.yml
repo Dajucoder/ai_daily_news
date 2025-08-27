@@ -41,10 +41,23 @@ services:
       - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
       - SILICONFLOW_BASE_URL=${SILICONFLOW_BASE_URL:-https://api.siliconflow.cn/v1}
       - MODEL_NAME=${MODEL_NAME:-Qwen/Qwen2.5-7B-Instruct}
+      - BACKEND_BASE_URL=${BACKEND_BASE_URL:-http://backend:8000}
+      - BACKEND_API_TOKEN=${BACKEND_API_TOKEN:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEFAULT_MODEL_PROVIDER=${DEFAULT_MODEL_PROVIDER:-siliconflow}
+      - DEFAULT_MODEL_ID=${DEFAULT_MODEL_ID:-Qwen/Qwen2.5-7B-Instruct}
     volumes:
       - ./ai-news-agent:/app
+      - ./ai-news-agent/logs:/app/logs
     ports:
       - "5001:5001"
+    depends_on:
+      - backend
+    # 开发环境下的额外配置
+    stdin_open: true
+    tty: true
+    # 开发环境下允许热重载
+    restart: "no"
 
 volumes:
   media_files:

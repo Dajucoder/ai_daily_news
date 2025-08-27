@@ -82,6 +82,22 @@ export class NewsService {
     apiCache.clear();
   }
 
+  // 批量删除新闻
+  static async batchDeleteNews(ids: number[]): Promise<{ message: string; deleted_count: number }> {
+    const response = await api.post('/api/news/news/batch-delete/', { ids });
+    // 清除相关缓存
+    apiCache.clear();
+    return response.data as { message: string; deleted_count: number };
+  }
+
+  // 删除所有新闻
+  static async deleteAllNews(): Promise<{ message: string; deleted_count: number }> {
+    const response = await api.post('/api/news/news/delete-all/');
+    // 清除相关缓存
+    apiCache.clear();
+    return response.data as { message: string; deleted_count: number };
+  }
+
   // 获取新闻统计
   static async getStats(): Promise<NewsStats> {
     const cacheKey = 'stats';
@@ -155,6 +171,30 @@ export class NewsService {
   static async getAgentStatus(): Promise<AgentStatus> {
     const response = await api.get('/api/news/service/agent_status/');
     return response.data as AgentStatus;
+  }
+
+  // 获取每日总结报告列表
+  static async getDailyReports(): Promise<any[]> {
+    const response = await api.get('/api/news/service/reports/');
+    return (response.data as any).reports || [];
+  }
+
+  // 获取最新每日总结
+  static async getLatestDailyReport(): Promise<any> {
+    const response = await api.get('/api/news/service/reports/latest/');
+    return response.data;
+  }
+
+  // 根据日期获取每日总结
+  static async getDailyReportByDate(date: string): Promise<any> {
+    const response = await api.get(`/api/news/service/reports/${date}/`);
+    return response.data;
+  }
+
+  // 删除每日总结
+  static async deleteDailyReport(date: string): Promise<{ message: string }> {
+    const response = await api.delete(`/api/news/service/reports/${date}/`);
+    return response.data as { message: string };
   }
 }
 

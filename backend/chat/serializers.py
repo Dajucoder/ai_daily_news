@@ -146,14 +146,13 @@ class CreateConversationSerializer(serializers.Serializer):
 
 class TestAPIConnectionSerializer(serializers.Serializer):
     """测试API连接序列化器"""
-    api_key = serializers.CharField(max_length=500)
+    api_key = serializers.CharField(max_length=500, required=False, allow_blank=True)
     api_base_url = serializers.URLField()
     test_model = serializers.CharField(max_length=100, required=False)
     
     def validate_api_key(self, value):
-        if not value.strip():
-            raise serializers.ValidationError("API密钥不能为空")
-        return value.strip()
+        # API密钥可以为空（用于本地ollama等模型）
+        return value.strip() if value else ""
 
 
 class ModelDetectionSerializer(serializers.Serializer):

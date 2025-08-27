@@ -13,6 +13,19 @@ import pytz
 from openai import OpenAI
 from rss_fetcher import RSSArticle
 from config import SILICONFLOW_API_KEY, SILICONFLOW_BASE_URL, MODEL_NAME
+from model_manager import ModelManager, ModelConfig
+
+# 设置详细的日志格式
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('ai_agent.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 
 class MockOpenAIClient:
@@ -173,37 +186,76 @@ class AIProcessor:
         'low': '低'
     }
     
-    def __init__(self):
+    def __init__(self, model_id=None):
         self.logger = logging.getLogger(__name__)
+        self.specified_model_id = model_id  # 保存指定的模型ID
         
-        if not SILICONFLOW_API_KEY:
-            raise ValueError("请设置SILICONFLOW_API_KEY环境变量")
+        # 初始化模型管理器
+        try:
+            self.model_manager = ModelManager()
+            self.current_model = self.model_manager.get_current_model()
+            if self.current_model:
+                self.logger.info(f"AI处理器初始化成功，当前模型: {self.current_model.model_name} ({self.current_model.provider_name})")
+            else:
+                self.logger.warning("无法获取AI模型配置，将使用默认配置")
+        except Exception as e:
+            self.logger.error(f"初始化模型管理器失败: {str(e)}")
+            self.logger.warning("将使用默认配置")
         
         self.client = None  # 延迟初始化
-        self.model_name = MODEL_NAME
     
     def _get_client(self):
         """获取OpenAI客户端，延迟初始化"""
         if self.client is None:
-            if not SILICONFLOW_API_KEY:
-                self.logger.error("SILICONFLOW_API_KEY未设置，将使用Mock客户端")
+            # 如果指定了模型ID，优先使用指定的模型
+            if self.specified_model_id:
+                try:
+                    # 根据模型ID获取模型配置
+                    available_models = self.model_manager.get_available_models()
+                    specified_model = None
+                    for model in available_models:
+                        if model.model_id == self.specified_model_id:
+                            specified_model = model
+                            break
+                    
+                    if specified_model:
+                        self.current_model = specified_model
+                        self.logger.info(f"使用指定模型: {specified_model.model_name} ({specified_model.provider_name})")
+                    else:
+                        self.logger.warning(f"指定的模型ID {self.specified_model_id} 未找到，使用当前选择的模型")
+                        self.current_model = self.model_manager.get_current_model()
+                except Exception as e:
+                    self.logger.error(f"获取指定模型失败: {str(e)}，使用当前选择的模型")
+                    self.current_model = self.model_manager.get_current_model()
+            else:
+                # 获取当前选择的模型
+                self.current_model = self.model_manager.get_current_model()
+            
+            if not self.current_model:
+                self.logger.error("无法获取模型配置，将使用Mock客户端")
+                self.client = MockOpenAIClient()
+                return self.client
+            
+            # 获取API密钥
+            api_key = self.current_model.api_key or SILICONFLOW_API_KEY
+            if not api_key:
+                self.logger.error("API密钥未设置，将使用Mock客户端")
                 self.client = MockOpenAIClient()
                 return self.client
             
             try:
                 self.client = OpenAI(
-                    api_key=SILICONFLOW_API_KEY,
-                    base_url=SILICONFLOW_BASE_URL,
+                    api_key=api_key,
+                    base_url=self.current_model.api_base_url,
                     timeout=None  # 移除超时限制
                 )
-                self.logger.info("OpenAI客户端初始化成功")
-                
-                # 不在初始化时测试连接，而是在实际使用时处理错误
+                self.logger.info(f"OpenAI客户端初始化成功，使用模型: {self.current_model.model_name} ({self.current_model.provider_name})")
                 
             except Exception as e:
                 self.logger.error(f"初始化OpenAI客户端失败: {e}")
                 self.logger.warning("将使用Mock客户端，生成的内容将是模板化的")
                 self.client = MockOpenAIClient()
+        
         return self.client
     
     def process_articles(self, articles: List[RSSArticle], progress_callback=None) -> List[ProcessedNews]:
@@ -301,7 +353,7 @@ class AIProcessor:
             包含is_relevant和is_today的字典
         """
         prompt = f"""
-        请分析以下文章是否符合以下条件：
+        用中文回答。请分析以下文章是否符合以下条件：
         1. 是否与人工智能(AI)相关
         2. 是否为今日(2024年最新)的新闻或信息
         
@@ -320,17 +372,51 @@ class AIProcessor:
         
         try:
             client = self._get_client()
-            response = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
+            current_model = self.current_model or self.model_manager.get_current_model()
+            
+            # 记录发送给大模型的内容
+            self.logger.info(f"=== 发送给大模型的内容 ===")
+            self.logger.info(f"模型: {current_model.model_name if current_model else 'Unknown'}")
+            self.logger.info(f"提供商: {current_model.provider_name if current_model else 'Unknown'}")
+            self.logger.info(f"提示词: {prompt}")
+            self.logger.info(f"================================")
+            
+            # 构建请求数据
+            request_data = {
+                "model": current_model.model_id if current_model else MODEL_NAME,
+                "messages": [
                     {"role": "system", "content": "你是一个专业的AI新闻筛选专家，能够准确判断文章的相关性和时效性。"},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,
-                max_tokens=200
-            )
+                "temperature": 0.1,
+                "max_tokens": 4096
+            }
+            
+            # 记录完整的请求JSON
+            self.logger.info(f"=== 发送给大模型的请求 ===")
+            self.logger.info(f"请求JSON: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"========================")
+            
+            response = client.chat.completions.create(**request_data)
             
             content = response.choices[0].message.content.strip()
+            
+            # 构建响应数据用于日志记录
+            response_data = {
+                "choices": [{"message": {"content": content}}],
+                "usage": {
+                    "total_tokens": response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') and response.usage else 0
+                } if hasattr(response, 'usage') and response.usage else {"total_tokens": 0}
+            }
+            
+            # 记录完整的响应JSON
+            self.logger.info(f"=== 大模型返回的响应 ===")
+            self.logger.info(f"响应JSON: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"使用Token: {response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 'Unknown'}")
+            self.logger.info(f"=======================")
+            
             result = self._parse_json_response(content)
             
             return {
@@ -356,7 +442,7 @@ class AIProcessor:
         categories_str = ", ".join([f"{k}({v})" for k, v in self.CATEGORIES.items()])
         
         prompt = f"""
-        请分析以下AI相关文章的内容，并按照JSON格式输出结构化摘要：
+        用中文回答。请分析以下AI相关文章的内容，并按照JSON格式输出结构化摘要：
         
         文章标题: {article.title}
         文章内容: {article.content[:1000]}
@@ -379,22 +465,60 @@ class AIProcessor:
         
         try:
             client = self._get_client()
+            current_model = self.current_model or self.model_manager.get_current_model()
             
             # 检查是否是Mock客户端
             if isinstance(client, MockOpenAIClient):
                 self.logger.warning("使用Mock客户端进行内容分析")
             
-            response = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
+            # 记录发送给大模型的内容
+            # 记录发送给大模型的内容
+            self.logger.info(f"=== 发送给大模型的内容 ===")
+            self.logger.info(f"模型: {current_model.model_name if current_model else 'Unknown'}")
+            self.logger.info(f"提供商: {current_model.provider_name if current_model else 'Unknown'}")
+            self.logger.info(f"提示词: {prompt}")
+            self.logger.info(f"================================")
+            
+            # 构建请求数据
+            request_data = {
+                "model": current_model.model_id if current_model else MODEL_NAME,
+                "messages": [
                     {"role": "system", "content": "你是一个专业的AI内容分析师，擅长分析和分类AI相关文章。"},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
-                max_tokens=500
-            )
+                "temperature": 0.3,
+                "max_tokens": 4096
+            }
+            
+            # 记录完整的请求JSON
+            self.logger.info(f"=== 发送给大模型的请求 ===")
+            self.logger.info(f"请求JSON: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"========================")
+            
+            self.logger.info("开始调用大模型API...")
+            
+            response = client.chat.completions.create(**request_data)
+            
+            self.logger.info("大模型API调用成功，开始处理回复...")
             
             content = response.choices[0].message.content.strip()
+            
+            # 构建响应数据用于日志记录
+            response_data = {
+                "choices": [{"message": {"content": content}}],
+                "usage": {
+                    "total_tokens": response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') and response.usage else 0
+                } if hasattr(response, 'usage') and response.usage else {"total_tokens": 0}
+            }
+            
+            # 记录完整的响应JSON
+            self.logger.info(f"=== 大模型返回的响应 ===")
+            self.logger.info(f"响应JSON: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"使用Token: {response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 'Unknown'}")
+            self.logger.info(f"=======================")
+            
             result = self._parse_json_response(content)
             
             # 如果是Mock客户端，记录警告
@@ -462,7 +586,7 @@ class AIProcessor:
             生成的摘要
         """
         prompt = f"""
-        请为以下AI相关文章生成一个简洁明了的中文摘要（100-200字）：
+        用中文回答。请为以下AI相关文章生成一个简洁明了的中文摘要（100-200字）：
         
         标题: {article.title}
         内容: {article.content[:1500]}
@@ -476,18 +600,47 @@ class AIProcessor:
         
         try:
             client = self._get_client()
+            client = self._get_client()
+            current_model = self.current_model or self.model_manager.get_current_model()
             
-            response = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
+            # 构建请求数据
+            request_data = {
+                "model": current_model.model_id if current_model else MODEL_NAME,
+                "messages": [
                     {"role": "system", "content": "你是一个专业的AI内容编辑，擅长提炼文章精华和生成高质量摘要。"},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,
-                max_tokens=300
-            )
+                "temperature": 0.4,
+                "max_tokens": 4096
+            }
             
+            # 记录完整的请求JSON
+            self.logger.info(f"=== 摘要生成 - 发送给大模型的请求 ===")
+            self.logger.info(f"请求JSON: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"================================")
+            
+            self.logger.info("开始调用大模型API生成摘要...")
+            
+            response = client.chat.completions.create(**request_data)
+            
+            self.logger.info("摘要生成API调用成功")
             summary = response.choices[0].message.content.strip()
+            
+            # 构建响应数据用于日志记录
+            response_data = {
+                "choices": [{"message": {"content": summary}}],
+                "usage": {
+                    "total_tokens": response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') and response.usage else 0
+                } if hasattr(response, 'usage') and response.usage else {"total_tokens": 0}
+            }
+            
+            # 记录完整的响应JSON
+            self.logger.info(f"=== 摘要生成 - 大模型返回的响应 ===")
+            self.logger.info(f"响应JSON: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"生成的摘要: {summary[:100]}...")
+            self.logger.info(f"================================")
             
             # 如果是Mock客户端，记录警告
             if isinstance(client, MockOpenAIClient):
@@ -531,7 +684,7 @@ class AIProcessor:
             关键要点列表
         """
         prompt = f"""
-        请从以下AI相关文章中提取3-5个关键要点：
+        用中文回答。请从以下AI相关文章中提取3-5个关键要点：
         
         标题: {article.title}
         内容: {article.content[:1500]}
@@ -548,18 +701,49 @@ class AIProcessor:
         
         try:
             client = self._get_client()
-            response = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
+            client = self._get_client()
+            current_model = self.current_model or self.model_manager.get_current_model()
+            
+            # 构建请求数据
+            request_data = {
+                "model": current_model.model_id if current_model else MODEL_NAME,
+                "messages": [
                     {"role": "system", "content": "你是一个专业的信息提取专家，能够准确识别文章中的关键信息点。"},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
-                max_tokens=400
-            )
+                "temperature": 0.3,
+                "max_tokens": 4096
+            }
             
+            # 记录完整的请求JSON
+            self.logger.info(f"=== 关键点提取 - 发送给大模型的请求 ===")
+            self.logger.info(f"请求JSON: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"==================================")
+            
+            self.logger.info("开始调用大模型API提取关键点...")
+            
+            response = client.chat.completions.create(**request_data)
+            
+            self.logger.info("关键点提取API调用成功")
             content = response.choices[0].message.content.strip()
+            
+            # 构建响应数据用于日志记录
+            response_data = {
+                "choices": [{"message": {"content": content}}],
+                "usage": {
+                    "total_tokens": response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') and response.usage else 0
+                } if hasattr(response, 'usage') and response.usage else {"total_tokens": 0}
+            }
+            
+            # 记录完整的响应JSON
+            self.logger.info(f"=== 关键点提取 - 大模型返回的响应 ===")
+            self.logger.info(f"响应JSON: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"==================================")
+            self.logger.info(f"关键点提取原始回复: {content}")
             key_points = self._parse_json_response(content)
+            self.logger.info(f"解析后的关键点: {key_points}")
             
             # 如果是Mock客户端，记录警告
             if isinstance(client, MockOpenAIClient):
@@ -678,6 +862,7 @@ class AIProcessor:
                 content = "内容需要查看原文链接获取详细信息。"
         
         return content[:1000]  # 限制长度
+        return content[:1000]  # 限制长度
     
     def _parse_json_response(self, content: str) -> Any:
         """
@@ -689,19 +874,31 @@ class AIProcessor:
         Returns:
             解析后的数据
         """
+        self.logger.info(f"开始解析JSON响应，内容长度: {len(content)}")
+        self.logger.info(f"原始内容: {content[:500]}...")
+        
         try:
             # 直接尝试解析
-            return json.loads(content)
-        except json.JSONDecodeError:
+            result = json.loads(content)
+            self.logger.info(f"JSON直接解析成功: {result}")
+            return result
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"JSON直接解析失败: {e}")
             try:
                 # 提取JSON部分
                 json_match = re.search(r'\{.*\}|\[.*\]', content, re.DOTALL)
                 if json_match:
-                    return json.loads(json_match.group())
+                    json_content = json_match.group()
+                    self.logger.info(f"提取到JSON内容: {json_content}")
+                    result = json.loads(json_content)
+                    self.logger.info(f"JSON提取解析成功: {result}")
+                    return result
                 else:
+                    self.logger.error("无法找到有效的JSON内容")
                     raise ValueError("无法找到有效的JSON内容")
-            except:
-                self.logger.error(f"JSON解析失败: {content[:200]}")
+            except Exception as parse_error:
+                self.logger.error(f"JSON解析完全失败: {parse_error}")
+                self.logger.error(f"失败的内容: {content[:200]}")
                 return {}
     
     def generate_daily_report(self, processed_news: List[ProcessedNews]) -> Dict[str, Any]:
@@ -769,7 +966,7 @@ class AIProcessor:
         news_titles = [news.title for news in processed_news[:10]]  # 取前10个标题
         
         prompt = f"""
-        请基于今日AI新闻数据生成一个简洁的每日总结（100-150字）：
+        用中文回答。请基于今日AI新闻数据生成一个简洁的每日总结（100-150字）：
         
         新闻总数: {len(processed_news)}
         重要新闻: {importance_stats.get('high', 0)}条
@@ -783,17 +980,47 @@ class AIProcessor:
         
         try:
             client = self._get_client()
-            response = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
+            client = self._get_client()
+            current_model = self.current_model or self.model_manager.get_current_model()
+            
+            # 构建请求数据
+            request_data = {
+                "model": current_model.model_id if current_model else MODEL_NAME,
+                "messages": [
                     {"role": "system", "content": "你是一个专业的AI行业分析师，擅长总结每日AI动态和趋势。"},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,
-                max_tokens=300
-            )
+                "temperature": 0.4,
+                "max_tokens": 4096
+            }
             
+            # 记录完整的请求JSON
+            self.logger.info(f"=== 每日总结 - 发送给大模型的请求 ===")
+            self.logger.info(f"请求JSON: {json.dumps(request_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"================================")
+            
+            self.logger.info("开始调用大模型API生成每日总结...")
+            
+            response = client.chat.completions.create(**request_data)
+            
+            self.logger.info("每日总结API调用成功")
             summary = response.choices[0].message.content.strip()
+            
+            # 构建响应数据用于日志记录
+            response_data = {
+                "choices": [{"message": {"content": summary}}],
+                "usage": {
+                    "total_tokens": response.usage.total_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') and response.usage else 0,
+                    "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') and response.usage else 0
+                } if hasattr(response, 'usage') and response.usage else {"total_tokens": 0}
+            }
+            
+            # 记录完整的响应JSON
+            self.logger.info(f"=== 每日总结 - 大模型返回的响应 ===")
+            self.logger.info(f"响应JSON: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+            self.logger.info(f"生成的每日总结: {summary}")
+            self.logger.info(f"================================")
             return summary
             
         except Exception as e:

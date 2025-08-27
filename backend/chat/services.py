@@ -150,11 +150,12 @@ class ChatService:
                 
                 # 调用AI API
                 ai_response = self._call_ai_api(
-                    provider=provider,
-                    model=model,
+                    api_base_url=ai_config['api_base_url'],
+                    api_key=ai_config['api_key'],
+                    model_id=ai_config['model'],
                     messages=message_history,
-                    max_tokens=chat_settings.max_tokens,
-                    temperature=chat_settings.temperature
+                    max_tokens=ai_config['max_tokens'],
+                    temperature=ai_config['temperature']
                 )
                 
                 # 保存AI回复
@@ -187,15 +188,23 @@ class ChatService:
             logger.error(f"发送消息失败: {str(e)}")
             raise
     
-    def _get_ai_config(self, chat_settings: ChatSettings) -> Tuple[AIProvider, AIModel]:
-        """获取AI配置（提供商和模型）"""
+    def _get_ai_config(self, user_or_settings) -> Dict:
+        """获取AI配置"""
+        # 兼容两种调用方式：传入User对象或ChatSettings对象
+        if isinstance(user_or_settings, User):
+            user = user_or_settings
+            chat_settings = self.get_or_create_chat_settings(user)
+        else:
+            chat_settings = user_or_settings
+            user = chat_settings.user
+        
         provider = chat_settings.default_provider
         model = chat_settings.default_model
         
         # 如果没有配置，使用默认的或第一个可用的
         if not provider:
             provider = AIProvider.objects.filter(
-                user=chat_settings.user, 
+                user=user, 
                 is_active=True
             ).first()
             
@@ -209,15 +218,31 @@ class ChatService:
         if not provider or not model:
             raise ValueError("请先在AI配置页面配置服务提供商和模型")
         
-        # 验证API密钥
-        if not provider.api_key or not provider.api_key.strip():
-            raise ValueError("AI服务提供商的API密钥未配置或为空")
-        
         # 验证API地址
         if not provider.api_base_url or not provider.api_base_url.strip():
             raise ValueError("AI服务提供商的API地址未配置或为空")
-            
-        return provider, model
+        
+        # 判断是否为本地服务（如 Ollama）
+        is_local_service = (
+            'localhost' in provider.api_base_url.lower() or 
+            '127.0.0.1' in provider.api_base_url or 
+            'ollama' in provider.api_base_url.lower() or
+            'host.docker.internal' in provider.api_base_url.lower()
+        )
+        
+        # 验证API密钥（本地服务可以为空）
+        if not is_local_service and (not provider.api_key or not provider.api_key.strip()):
+            raise ValueError("AI服务提供商的API密钥未配置或为空")
+        
+        return {
+            'api_base_url': provider.api_base_url,
+            'api_key': provider.api_key if not is_local_service else 'dummy-key-for-local-service',
+            'model': model.model_id,
+            'max_tokens': min(chat_settings.max_tokens, model.max_tokens),
+            'temperature': chat_settings.temperature,
+            'provider_name': provider.name,
+            'model_name': model.model_name
+        }
     
     def _get_fallback_response(self, error_msg: str) -> str:
         """获取AI服务不可用时的回退响应"""
@@ -262,20 +287,20 @@ AI服务暂时无法连接，可能原因:
 
 **建议**: 请稍后重试，或前往AI配置页面检查设置。"""
     
-    def _call_ai_api(self, provider: AIProvider, model: AIModel, messages: List[Dict], max_tokens: int, temperature: float) -> Dict:
+    def _call_ai_api(self, api_base_url: str, api_key: str, model_id: str, messages: List[Dict], max_tokens: int, temperature: float) -> Dict:
         """调用AI API"""
         try:
             # 使用用户配置的AI提供商，无超时限制
             client = openai.OpenAI(
-                api_key=provider.api_key,
-                base_url=provider.api_base_url
+                api_key=api_key,
+                base_url=api_base_url
             )
             
             # 调用API
             response = client.chat.completions.create(
-                model=model.model_id,
+                model=model_id,
                 messages=messages,
-                max_tokens=min(max_tokens, model.max_tokens),  # 不超过模型限制
+                max_tokens=max_tokens,
                 temperature=temperature,
                 stream=False
             )
@@ -368,16 +393,16 @@ AI服务暂时无法连接，可能原因:
                 })
             
             # 获取AI配置
-            provider, model = self._get_ai_config(chat_settings)
+            ai_config = self._get_ai_config(chat_settings)
             
             # 记录详细的请求信息
             logger.info(f"=== AI API 请求开始 ===")
             logger.info(f"用户: {user.username}")
             logger.info(f"会话ID: {conversation.id}")
-            logger.info(f"模型提供商: {provider.name} ({provider.provider_type})")
-            logger.info(f"使用模型: {model.model_name} ({model.model_id})")
-            logger.info(f"API地址: {provider.api_base_url}")
-            logger.info(f"请求参数: max_tokens={chat_settings.max_tokens}, temperature={chat_settings.temperature}")
+            logger.info(f"模型提供商: {ai_config['provider_name']}")
+            logger.info(f"使用模型: {ai_config['model_name']} ({ai_config['model']})")
+            logger.info(f"API地址: {ai_config['api_base_url']}")
+            logger.info(f"请求参数: max_tokens={ai_config['max_tokens']}, temperature={ai_config['temperature']}")
             logger.info(f"消息历史 ({len(message_history)} 条):")
             for i, msg in enumerate(message_history):
                 role_display = {"system": "系统", "user": "用户", "assistant": "AI"}.get(msg['role'], msg['role'])
@@ -386,11 +411,12 @@ AI服务暂时无法连接，可能原因:
             
             # 直接调用AI API获取完整回复
             ai_response = self._call_ai_api(
-                provider=provider,
-                model=model,
+                api_base_url=ai_config['api_base_url'],
+                api_key=ai_config['api_key'],
+                model_id=ai_config['model'],
                 messages=message_history,
-                max_tokens=chat_settings.max_tokens,
-                temperature=chat_settings.temperature
+                max_tokens=ai_config['max_tokens'],
+                temperature=ai_config['temperature']
             )
             
             # 记录AI响应信息
@@ -419,8 +445,8 @@ AI服务暂时无法连接，可能原因:
                 role='assistant',
                 content=clean_content,
                 thinking=thinking_content if thinking_content else None,
-                model_name=model.model_name,
-                model_provider=provider.name,
+                model_name=ai_config['model_name'],
+                model_provider=ai_config['provider_name'],
                 token_count=ai_response['token_count']
             )
             

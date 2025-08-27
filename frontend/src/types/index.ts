@@ -96,6 +96,37 @@ export interface UserProfile {
   email_notifications: boolean;
 }
 
+export interface ModelInfo {
+  model_id: string;
+  model_name: string;
+  provider_name: string;
+  provider_type: string;
+  max_tokens: number;
+  support_functions: boolean;
+  support_vision: boolean;
+  is_current: boolean;
+}
+
+export interface ModelsResponse {
+  models: ModelInfo[];
+  total_count: number;
+  current_model: string | null;
+}
+
+export interface SelectModelRequest {
+  model_id: string;
+}
+
+export interface SelectModelResponse {
+  message: string;
+  model: {
+    model_id: string;
+    model_name: string;
+    provider_name: string;
+    provider_type: string;
+  };
+}
+
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;

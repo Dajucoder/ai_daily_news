@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
   List, 
@@ -25,7 +25,7 @@ import {
   RocketOutlined,
   BulbOutlined
 } from '@ant-design/icons';
-import { NewsItem, NewsStats, CATEGORY_LABELS, IMPORTANCE_LABELS } from '../types';
+import { NewsItem, CATEGORY_LABELS, IMPORTANCE_LABELS } from '../types';
 import { NewsService } from '../services/newsService';
 
 const { Title, Text, Paragraph } = Typography;
@@ -52,7 +52,7 @@ const NewsRecommendations: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedImportance, setSelectedImportance] = useState<string>('all');
 
-  const loadRecommendations = async () => {
+  const loadRecommendations = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -97,7 +97,7 @@ const NewsRecommendations: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const calculateRecommendations = (newsItems: NewsItem[], stats: StatsData): RecommendationItem[] => {
     return newsItems.map(item => {
@@ -182,7 +182,7 @@ const NewsRecommendations: React.FC = () => {
 
   useEffect(() => {
     loadRecommendations();
-  }, []);
+  }, [loadRecommendations]);
 
   const getImportanceColor = (importance: string) => {
     switch (importance) {

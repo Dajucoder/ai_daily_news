@@ -12,6 +12,8 @@
 - [Pull Request 流程](#pull-request-流程)
 - [问题报告](#问题报告)
 - [功能请求](#功能请求)
+- [开发最佳实践](#开发最佳实践)
+- [获取帮助](#获取帮助)
 
 ## 🤝 行为准则
 
@@ -39,33 +41,39 @@
    - Bug修复
    - 性能优化
    - 代码重构
+   - 测试用例编写
 
 2. **文档贡献**
    - API文档完善
    - 使用指南编写
    - 代码注释改进
    - 翻译工作
+   - 开发文档更新
 
 3. **测试贡献**
    - 单元测试编写
    - 集成测试完善
    - 性能测试
    - 用户体验测试
+   - 端到端测试
 
 4. **其他贡献**
    - 问题报告
    - 功能建议
    - 设计改进
    - 社区支持
+   - 性能优化建议
 
 ## 🛠️ 开发环境设置
 
 ### 前置要求
 
-- Python 3.8+
-- Node.js 16+
-- Git
-- Docker & Docker Compose (可选)
+- Python 3.12+
+- Node.js 18+
+- Git 2.30+
+- Docker 20.0+ & Docker Compose 2.0
+- PostgreSQL 15+ (可选，开发环境可使用SQLite)
+- Redis 7.0+ (可选，用于缓存和任务队列)
 
 ### 环境搭建
 
@@ -75,15 +83,18 @@ git clone https://github.com/your-username/ai_daily_news.git
 cd ai_daily_news
 ```
 
-2. **设置开发环境**
+2. **设置开发环境（推荐使用Docker）**
 ```bash
 # 复制环境变量
 cp .env.example .env
 cp ai-news-agent/.env.example ai-news-agent/.env
 cp frontend/.env.example frontend/.env
 
-# 使用Docker快速启动
-docker-compose -f docker-compose.dev.yml up -d
+# 使用Docker快速启动开发环境
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# 等待服务启动完成
+docker-compose ps
 ```
 
 3. **手动环境设置**
@@ -94,33 +105,74 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+
+# 数据库迁移
 python manage.py migrate
 python manage.py createsuperuser
+
+# 启动开发服务器
+python manage.py runserver 0.0.0.0:8000
 ```
 
 **前端环境**
 ```bash
 cd frontend
 npm install
+
+# 启动开发服务器
+npm start
 ```
 
 **AI代理环境**
 ```bash
 cd ai-news-agent
 pip install -r requirements.txt
+
+# 启动AI代理服务
+python start.py
 ```
 
 ### 开发服务启动
 
 ```bash
-# 后端服务 (端口 8000)
-cd backend && python manage.py runserver
+# 使用Docker启动所有服务
+docker-compose -f docker-compose.dev.yml up -d
 
-# 前端服务 (端口 3000)
-cd frontend && npm start
+# 查看服务状态
+docker-compose ps
 
-# AI代理服务 (端口 5001)
-cd ai-news-agent && python start.py
+# 查看特定服务日志
+docker-compose logs -f backend
+docker-compose logs -f frontend
+docker-compose logs -f ai-news-agent
+
+# 停止所有服务
+docker-compose down
+```
+
+### 数据库设置
+
+**SQLite (开发环境)**
+```bash
+# 默认使用SQLite，无需额外配置
+python manage.py migrate
+```
+
+**PostgreSQL (生产环境)**
+```bash
+# 安装PostgreSQL
+# Ubuntu/Debian
+sudo apt-get install postgresql postgresql-contrib
+
+# macOS
+brew install postgresql
+
+# 创建数据库
+sudo -u postgres createdb ai_news
+sudo -u postgres createuser --interactive
+
+# 更新环境变量
+DATABASE_URL=postgresql://username:password@localhost:5432/ai_news
 ```
 
 ## 📝 代码规范
@@ -131,7 +183,10 @@ cd ai-news-agent && python start.py
 
 ```bash
 # 安装开发工具
-pip install black flake8 isort mypy
+pip install black flake8 isort mypy pre-commit
+
+# 配置pre-commit钩子
+pre-commit install
 
 # 代码格式化
 black .
@@ -140,6 +195,9 @@ isort .
 # 代码检查
 flake8 .
 mypy .
+
+# 运行所有检查
+pre-commit run --all-files
 ```
 
 **代码风格要点：**
@@ -148,51 +206,122 @@ mypy .
 - 使用有意义的变量和函数名
 - 添加适当的类型注解
 - 编写清晰的文档字符串
+- 遵循Django最佳实践
 
 **示例：**
 ```python
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from django.db import models
+from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 class NewsArticle(models.Model):
     """新闻文章模型
     
+    用于存储从RSS源获取的新闻文章信息。
+    
     Attributes:
-        title: 文章标题
-        content: 文章内容
-        published_at: 发布时间
+        title: 文章标题，最大长度200字符
+        content: 文章内容，支持HTML格式
+        published_at: 发布时间，自动设置为创建时间
+        source: 新闻来源
+        category: 新闻分类
+        is_active: 是否激活状态
     """
-    title: str = models.CharField(max_length=200, help_text="文章标题")
+    
+    title: str = models.CharField(
+        max_length=200, 
+        help_text="文章标题",
+        db_index=True
+    )
     content: str = models.TextField(help_text="文章内容")
-    published_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
+    published_at: models.DateTimeField = models.DateTimeField(
+        default=timezone.now,
+        help_text="发布时间"
+    )
+    source: str = models.CharField(
+        max_length=100,
+        help_text="新闻来源"
+    )
+    category: str = models.CharField(
+        max_length=50,
+        choices=[
+            ('technology', '技术'),
+            ('business', '商业'),
+            ('politics', '政治'),
+            ('sports', '体育'),
+        ],
+        default='technology'
+    )
+    is_active: bool = models.BooleanField(
+        default=True,
+        help_text="是否激活状态"
+    )
+    
+    class Meta:
+        """模型元数据"""
+        db_table = 'news_articles'
+        ordering = ['-published_at']
+        indexes = [
+            models.Index(fields=['category', 'published_at']),
+            models.Index(fields=['source', 'published_at']),
+        ]
+        verbose_name = '新闻文章'
+        verbose_name_plural = '新闻文章'
+    
+    def __str__(self) -> str:
+        """返回模型的字符串表示"""
+        return f"{self.title} - {self.source}"
     
     def get_summary(self, max_length: int = 100) -> str:
         """获取文章摘要
         
         Args:
-            max_length: 摘要最大长度
+            max_length: 摘要最大长度，默认100字符
             
         Returns:
             文章摘要字符串
+            
+        Raises:
+            ValueError: 当max_length小于等于0时
         """
+        if max_length <= 0:
+            raise ValueError("max_length必须大于0")
+            
         if len(self.content) <= max_length:
             return self.content
         return f"{self.content[:max_length]}..."
+    
+    def clean(self) -> None:
+        """模型验证"""
+        if len(self.title.strip()) == 0:
+            raise ValidationError("标题不能为空")
+        
+        if len(self.content.strip()) == 0:
+            raise ValidationError("内容不能为空")
+    
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """保存前的处理"""
+        self.clean()
+        super().save(*args, **kwargs)
 ```
 
 ### JavaScript/TypeScript 代码规范
 
-我们使用 ESLint 和 Prettier 进行代码规范化：
+我们使用 ESLint、Prettier 和 TypeScript 进行代码规范化：
 
 ```bash
 # 安装开发工具
-npm install --save-dev eslint prettier @typescript-eslint/parser
+npm install --save-dev eslint prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin
 
 # 代码格式化
 npm run format
 
 # 代码检查
 npm run lint
+
+# 类型检查
+npm run type-check
 ```
 
 **代码风格要点：**
@@ -201,44 +330,239 @@ npm run lint
 - 优先使用 const，其次 let
 - 使用 TypeScript 类型注解
 - 组件使用 PascalCase 命名
+- 使用函数式组件和Hooks
+- 遵循React最佳实践
 
 **示例：**
 ```typescript
-import React, { useState, useEffect } from 'react';
-import { Button, Card, Typography } from 'antd';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Button, Card, Typography, Tag, Space, Tooltip } from 'antd';
+import { EyeOutlined, LikeOutlined, ShareAltOutlined } from '@ant-design/icons';
+import type { NewsItem, Category } from '@/types';
 
 interface NewsItemProps {
-  id: number;
-  title: string;
-  content: string;
-  publishedAt: string;
+  /** 新闻项目数据 */
+  news: NewsItem;
+  /** 是否显示完整内容 */
+  showFullContent?: boolean;
+  /** 点击事件回调 */
+  onItemClick?: (news: NewsItem) => void;
+  /** 点赞事件回调 */
+  onLike?: (newsId: number) => void;
+  /** 分享事件回调 */
+  onShare?: (news: NewsItem) => void;
 }
 
 const NewsItem: React.FC<NewsItemProps> = ({ 
-  id, 
-  title, 
-  content, 
-  publishedAt 
+  news, 
+  showFullContent = false,
+  onItemClick,
+  onLike,
+  onShare
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [likeCount, setLikeCount] = useState<number>(news.likeCount || 0);
   
-  const handleToggleExpand = (): void => {
+  // 处理展开/收起
+  const handleToggleExpand = useCallback((): void => {
     setIsExpanded(!isExpanded);
-  };
+  }, [isExpanded]);
+  
+  // 处理点赞
+  const handleLike = useCallback((): void => {
+    if (onLike) {
+      onLike(news.id);
+      setLikeCount(prev => prev + 1);
+    }
+  }, [news.id, onLike]);
+  
+  // 处理分享
+  const handleShare = useCallback((): void => {
+    if (onShare) {
+      onShare(news);
+    }
+  }, [news, onShare]);
+  
+  // 处理点击
+  const handleClick = useCallback((): void => {
+    if (onItemClick) {
+      onItemClick(news);
+    }
+  }, [news, onItemClick]);
+  
+  // 计算显示内容
+  const displayContent = useMemo((): string => {
+    if (showFullContent || isExpanded) {
+      return news.content;
+    }
+    return news.content.length > 200 
+      ? `${news.content.substring(0, 200)}...` 
+      : news.content;
+  }, [news.content, showFullContent, isExpanded]);
+  
+  // 格式化发布时间
+  const formattedTime = useMemo((): string => {
+    const date = new Date(news.publishedAt);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }, [news.publishedAt]);
   
   return (
-    <Card title={title} extra={publishedAt}>
-      <Typography.Paragraph ellipsis={!isExpanded}>
-        {content}
-      </Typography.Paragraph>
-      <Button onClick={handleToggleExpand}>
-        {isExpanded ? '收起' : '展开'}
-      </Button>
+    <Card 
+      hoverable
+      className="news-item-card"
+      onClick={handleClick}
+    >
+      <div className="news-header">
+        <Typography.Title level={4} className="news-title">
+          {news.title}
+        </Typography.Title>
+        <Space size="small">
+          <Tag color="blue">{news.category}</Tag>
+          <Typography.Text type="secondary" className="news-time">
+            {formattedTime}
+          </Typography.Text>
+        </Space>
+      </div>
+      
+      <div className="news-content">
+        <Typography.Paragraph 
+          ellipsis={!showFullContent && !isExpanded}
+          className="news-text"
+        >
+          {displayContent}
+        </Typography.Paragraph>
+        
+        {!showFullContent && news.content.length > 200 && (
+          <Button 
+            type="link" 
+            onClick={handleToggleExpand}
+            className="expand-button"
+          >
+            {isExpanded ? '收起' : '展开'}
+          </Button>
+        )}
+      </div>
+      
+      <div className="news-footer">
+        <Space size="middle">
+          <Tooltip title="查看">
+            <Button 
+              type="text" 
+              icon={<EyeOutlined />}
+              className="action-button"
+            />
+          </Tooltip>
+          
+          <Tooltip title="点赞">
+            <Button 
+              type="text" 
+              icon={<LikeOutlined />}
+              onClick={handleLike}
+              className="action-button"
+            >
+              {likeCount}
+            </Button>
+          </Tooltip>
+          
+          <Tooltip title="分享">
+            <Button 
+              type="text" 
+              icon={<ShareAltOutlined />}
+              onClick={handleShare}
+              className="action-button"
+            />
+          </Tooltip>
+        </Space>
+        
+        <Typography.Text type="secondary" className="news-source">
+          来源: {news.source}
+        </Typography.Text>
+      </div>
     </Card>
   );
 };
 
 export default NewsItem;
+```
+
+### Django 特定规范
+
+**模型设计**
+```python
+# 使用有意义的字段名和关系
+class RSSSource(models.Model):
+    name = models.CharField(max_length=100, verbose_name="源名称")
+    url = models.URLField(verbose_name="RSS地址")
+    category = models.CharField(max_length=50, verbose_name="分类")
+    is_active = models.BooleanField(default=True, verbose_name="是否激活")
+    last_fetch = models.DateTimeField(null=True, blank=True, verbose_name="最后获取时间")
+    
+    class Meta:
+        verbose_name = "RSS源"
+        verbose_name_plural = "RSS源"
+        ordering = ['name']
+        unique_together = ['url', 'category']
+    
+    def __str__(self):
+        return f"{self.name} ({self.category})"
+    
+    def clean(self):
+        """验证RSS源"""
+        if not self.url.startswith(('http://', 'https://')):
+            raise ValidationError("URL必须以http://或https://开头")
+    
+    def get_fetch_status(self):
+        """获取获取状态"""
+        if not self.last_fetch:
+            return "从未获取"
+        
+        time_diff = timezone.now() - self.last_fetch
+        if time_diff.days > 1:
+            return "需要更新"
+        return "正常"
+```
+
+**视图设计**
+```python
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters import rest_framework as filters
+
+class NewsViewSet(viewsets.ModelViewSet):
+    """新闻视图集"""
+    queryset = NewsArticle.objects.filter(is_active=True)
+    serializer_class = NewsArticleSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.DjangoFilterBackend]
+    filterset_fields = ['category', 'source', 'published_at']
+    
+    @action(detail=False, methods=['post'])
+    def fetch_latest(self, request):
+        """手动获取最新新闻"""
+        try:
+            # 执行新闻获取逻辑
+            fetched_count = self.perform_fetch()
+            return Response({
+                'message': f'成功获取 {fetched_count} 条新闻',
+                'fetched_count': fetched_count
+            })
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def perform_fetch(self):
+        """执行新闻获取"""
+        # 实现获取逻辑
+        pass
 ```
 
 ## 📋 提交规范
@@ -265,6 +589,8 @@ export default NewsItem;
 - `perf`: 性能优化
 - `test`: 测试相关
 - `chore`: 构建过程或辅助工具的变动
+- `ci`: CI/CD相关
+- `build`: 构建系统相关
 
 ### 作用域说明
 
@@ -273,6 +599,9 @@ export default NewsItem;
 - `agent`: AI代理相关
 - `docs`: 文档相关
 - `docker`: Docker配置相关
+- `api`: API相关
+- `ui`: 用户界面相关
+- `db`: 数据库相关
 
 ### 提交示例
 
@@ -285,6 +614,8 @@ refactor(agent): optimize news fetching logic
 perf(frontend): improve component rendering performance
 test(backend): add unit tests for news models
 chore(docker): update docker-compose configuration
+ci(github): add automated testing workflow
+build(frontend): upgrade to Vite 5.0
 ```
 
 ## 🔄 Pull Request 流程
@@ -315,6 +646,10 @@ cd frontend && npm test
 # 检查代码规范
 black . && flake8 .
 npm run lint
+
+# 类型检查
+mypy .
+npm run type-check
 ```
 
 ### 3. 提交更改
@@ -344,12 +679,15 @@ git push origin feature/add-news-analytics
 - [ ] 新功能
 - [ ] 代码重构
 - [ ] 文档更新
+- [ ] 性能优化
+- [ ] 测试相关
 - [ ] 其他
 
 ## 测试
 - [ ] 单元测试通过
 - [ ] 集成测试通过
 - [ ] 手动测试完成
+- [ ] 代码规范检查通过
 
 ## 相关Issue
 Closes #123
@@ -363,6 +701,8 @@ Closes #123
 - [ ] 添加了必要的注释
 - [ ] 更新了相关文档
 - [ ] 没有引入新的警告
+- [ ] 所有测试通过
+- [ ] 代码格式化完成
 ```
 
 ### 5. 代码审查
@@ -370,6 +710,7 @@ Closes #123
 - 积极响应审查意见
 - 及时修复发现的问题
 - 保持友好的沟通态度
+- 遵循审查反馈进行改进
 
 ## 🐛 问题报告
 
@@ -408,6 +749,8 @@ Closes #123
 - 操作系统: [e.g. macOS 12.0]
 - 浏览器: [e.g. Chrome 95.0]
 - 项目版本: [e.g. v1.0.0]
+- Python版本: [e.g. 3.12.0]
+- Node.js版本: [e.g. 18.0.0]
 
 ## 附加信息
 添加任何其他关于问题的信息。
@@ -453,6 +796,8 @@ Closes #123
 - `feature`: 新功能
 - `documentation`: 文档相关
 - `question`: 问题咨询
+- `performance`: 性能相关
+- `security`: 安全相关
 
 ### 优先级标签
 - `priority/high`: 高优先级
@@ -464,12 +809,15 @@ Closes #123
 - `status/needs-review`: 需要审查
 - `status/blocked`: 被阻塞
 - `status/ready`: 准备就绪
+- `status/testing`: 测试中
 
 ### 组件标签
 - `component/backend`: 后端相关
 - `component/frontend`: 前端相关
 - `component/agent`: AI代理相关
 - `component/docs`: 文档相关
+- `component/api`: API相关
+- `component/ui`: 用户界面相关
 
 ## 🎯 开发最佳实践
 
@@ -494,6 +842,10 @@ python manage.py test news
 # 生成覆盖率报告
 coverage run --source='.' manage.py test
 coverage report
+coverage html  # 生成HTML报告
+
+# 运行性能测试
+python manage.py test --settings=ai_news_backend.settings.test
 ```
 
 **前端测试**
@@ -506,6 +858,9 @@ npm run test:e2e
 
 # 生成覆盖率报告
 npm run test:coverage
+
+# 运行类型检查
+npm run type-check
 ```
 
 ### 3. 性能考虑
@@ -514,6 +869,7 @@ npm run test:coverage
 - 前端组件懒加载
 - API响应缓存
 - 图片压缩优化
+- 代码分割和Tree Shaking
 
 ### 4. 安全最佳实践
 
@@ -522,6 +878,60 @@ npm run test:coverage
 - XSS攻击防护
 - CSRF保护
 - 敏感信息加密
+- 权限控制
+- API限流
+
+### 5. 代码质量保证
+
+```bash
+# 安装pre-commit钩子
+pip install pre-commit
+pre-commit install
+
+# 运行所有检查
+pre-commit run --all-files
+
+# 自动修复
+pre-commit run --all-files --hook-stage manual
+```
+
+### 6. 数据库最佳实践
+
+```python
+# 使用select_related和prefetch_related优化查询
+class NewsViewSet(viewsets.ModelViewSet):
+    def get_queryset(self):
+        return NewsArticle.objects.select_related('source').prefetch_related('tags')
+    
+    # 使用数据库索引
+    class Meta:
+        indexes = [
+            models.Index(fields=['published_at']),
+            models.Index(fields=['category', 'published_at']),
+        ]
+```
+
+### 7. API设计最佳实践
+
+```python
+# 使用序列化器验证数据
+class NewsArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NewsArticle
+        fields = ['id', 'title', 'content', 'published_at', 'source', 'category']
+        read_only_fields = ['id', 'published_at']
+    
+    def validate_title(self, value):
+        if len(value.strip()) < 5:
+            raise serializers.ValidationError("标题至少需要5个字符")
+        return value
+
+# 使用分页
+class NewsViewSet(viewsets.ModelViewSet):
+    pagination_class = StandardResultsSetPagination
+    page_size = 20
+    max_page_size = 100
+```
 
 ## 📞 获取帮助
 
@@ -531,6 +941,7 @@ npm run test:coverage
 2. **GitHub Discussions**: 参与社区讨论
 3. **邮件联系**: [your-email@example.com]
 4. **微信群**: 扫描二维码加入开发者群
+5. **项目文档**: 查看 [docs/](docs/) 目录下的详细文档
 
 ## 🙏 致谢
 

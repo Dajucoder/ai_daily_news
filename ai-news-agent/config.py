@@ -49,10 +49,20 @@ RSS_SOURCES = [
     }
 ]
 
-# AI模型配置 - 使用硅基流动
-SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY", "")
-SILICONFLOW_BASE_URL = "https://api.siliconflow.cn/v1"
-MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
+# AI配置相关
+SILICONFLOW_API_KEY = os.getenv('SILICONFLOW_API_KEY')
+SILICONFLOW_BASE_URL = os.getenv('SILICONFLOW_BASE_URL', 'https://api.siliconflow.cn/v1')
+MODEL_NAME = os.getenv('MODEL_NAME', 'Qwen/Qwen2.5-7B-Instruct')
+
+# 后端服务配置
+BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', 'http://localhost:8000')
+BACKEND_API_TOKEN = os.getenv('BACKEND_API_TOKEN', '')
+
+# JWT认证配置
+BACKEND_USERNAME = os.getenv('BACKEND_USERNAME', 'admin')
+BACKEND_PASSWORD = os.getenv('BACKEND_PASSWORD', 'admin123')
+BACKEND_JWT_TOKEN = os.getenv('BACKEND_JWT_TOKEN', '')
+BACKEND_AUTH_ENDPOINT = f"{BACKEND_BASE_URL}/api/auth/login/"
 
 # 请求配置
 REQUEST_TIMEOUT = None  # 无超时限制
@@ -70,4 +80,10 @@ DEFAULT_FETCH_HOURS = [9, 14, 18]  # 默认抓取时间点
 
 # 输出配置
 OUTPUT_FORMAT = "json"
-LOG_LEVEL = "INFO"
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+LOG_FILE = 'ai_agent.log'
+
+# 模型选择配置
+DEFAULT_MODEL_PROVIDER = os.getenv('DEFAULT_MODEL_PROVIDER', 'siliconflow')
+DEFAULT_MODEL_ID = os.getenv('DEFAULT_MODEL_ID', 'Qwen/Qwen3-8B')

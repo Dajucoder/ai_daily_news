@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { formatDateForShanghai } from './api';
+import { ModelInfo, ModelsResponse, SelectModelResponse } from '../types';
 
 const AGENT_BASE_URL = process.env.REACT_APP_AGENT_URL || 'http://localhost:5001';
 
@@ -38,7 +39,10 @@ agentApi.interceptors.response.use(
 export interface FetchNewsRequest {
   date?: string;
   force_refresh?: boolean;
+  model_id?: string;  // 新增：指定使用的模型
 }
+
+
 
 export interface FetchStatus {
   is_fetching: boolean;
@@ -147,6 +151,24 @@ class AgentService {
   // 格式化时间为上海时区
   formatTime(timestamp: string): string {
     return formatDateForShanghai(timestamp);
+  }
+
+  // 获取可用模型列表
+  async getAvailableModels(): Promise<ModelsResponse> {
+    const response = await agentApi.get('/api/models');
+    return response.data as ModelsResponse;
+  }
+
+  // 选择指定模型
+  async selectModel(modelId: string): Promise<SelectModelResponse> {
+    const response = await agentApi.post('/api/models/select', { model_id: modelId });
+    return response.data as SelectModelResponse;
+  }
+
+  // 获取当前选择的模型
+  async getCurrentModel(): Promise<ModelInfo> {
+    const response = await agentApi.get('/api/models/current');
+    return (response.data as any).model as ModelInfo;
   }
 }
 

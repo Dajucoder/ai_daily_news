@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Layout,
   Input,
@@ -9,7 +9,6 @@ import {
   Avatar,
   Space,
   message,
-  Spin,
   Empty,
   Dropdown,
   Modal,
@@ -19,7 +18,6 @@ import {
   Divider,
   Row,
   Col,
-  Tag,
   Select
 } from 'antd';
 import {
@@ -29,7 +27,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   UserOutlined,
-  RobotOutlined,
   MenuOutlined,
   MoreOutlined
 } from '@ant-design/icons';
@@ -41,7 +38,7 @@ import MarkdownMessage from './MarkdownMessage';
 import ThinkingProcess from './ThinkingProcess';
 
 const { Sider, Content } = Layout;
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const Chat: React.FC = () => {
@@ -103,7 +100,7 @@ const Chat: React.FC = () => {
   };
 
   // 加载会话消息
-  const loadMessages = async (conversationId: number) => {
+  const loadMessages = useCallback(async (conversationId: number) => {
     try {
       const conversationMessages = await chatService.getConversationMessages(conversationId);
       setMessages(conversationMessages);
@@ -112,10 +109,10 @@ const Chat: React.FC = () => {
       message.error('加载消息失败');
       console.error('Load messages error:', error);
     }
-  };
+  }, []);
 
   // 加载聊天设置
-  const loadChatSettings = async () => {
+  const loadChatSettings = useCallback(async () => {
     try {
       const settings = await chatService.getChatSettings();
       setChatSettings(settings);
@@ -124,7 +121,7 @@ const Chat: React.FC = () => {
       message.error('加载聊天设置失败');
       console.error('Load chat settings error:', error);
     }
-  };
+  }, [settingsForm]);
 
   // 发送消息
   const sendMessage = async () => {
@@ -275,7 +272,7 @@ const Chat: React.FC = () => {
   };
 
   // 自动刷新会话列表
-  const startAutoRefresh = () => {
+  const startAutoRefresh = useCallback(() => {
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
     }
@@ -288,7 +285,7 @@ const Chat: React.FC = () => {
         setLastRefreshTime(now);
       }
     }, 2000); // 每2秒检查一次
-  };
+  }, [lastRefreshTime]);
 
   const stopAutoRefresh = () => {
     if (refreshIntervalRef.current) {
@@ -306,7 +303,7 @@ const Chat: React.FC = () => {
     return () => {
       stopAutoRefresh();
     };
-  }, []);
+  }, [loadChatSettings, startAutoRefresh]);
 
   // 在发送消息或创建新会话时更新刷新时间和重新加载消息
   useEffect(() => {
@@ -316,7 +313,7 @@ const Chat: React.FC = () => {
     if (currentConversation?.id) {
       loadMessages(currentConversation.id);
     }
-  }, [currentConversation?.id]);
+  }, [currentConversation?.id, loadMessages]);
   
   // 监听消息变化，更新时间戳
   useEffect(() => {

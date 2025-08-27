@@ -63,7 +63,7 @@ class AIProvider(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_providers', verbose_name='用户')
     name = models.CharField(max_length=100, verbose_name='提供商名称')
     provider_type = models.CharField(max_length=20, choices=PROVIDER_CHOICES, verbose_name='提供商类型')
-    api_key = models.TextField(verbose_name='API密钥')  # 使用TextField以支持加密存储
+    api_key = models.TextField(blank=True, null=True, verbose_name='API密钥')  # 使用TextField以支持加密存储，允许为空
     api_base_url = models.URLField(verbose_name='API基础地址')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
     is_default = models.BooleanField(default=False, verbose_name='是否为默认配置')

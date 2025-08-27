@@ -579,6 +579,54 @@ class NewsService:
                 'message': f'检查代理状态失败: {str(e)}'
             }
 
+    def get_daily_reports(self) -> Dict[str, Any]:
+        """获取每日总结报告列表"""
+        try:
+            response = self.agent_client.session.get(f"{self.agent_client.base_url}/api/reports")
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self.logger.error(f"获取每日报告列表失败: {str(e)}")
+            return {"reports": [], "error": str(e)}
+
+    def get_latest_daily_report(self) -> Dict[str, Any]:
+        """获取最新每日总结"""
+        try:
+            response = self.agent_client.session.get(f"{self.agent_client.base_url}/api/reports/latest")
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self.logger.error(f"获取最新每日报告失败: {str(e)}")
+            return {"error": str(e)}
+
+    def get_daily_report_by_date(self, date: str) -> Dict[str, Any]:
+        """根据日期获取每日总结"""
+        try:
+            response = self.agent_client.session.get(f"{self.agent_client.base_url}/api/reports/{date}")
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self.logger.error(f"获取日期 {date} 的每日报告失败: {str(e)}")
+            return {"error": str(e)}
+
+    def delete_daily_report(self, date: str) -> Dict[str, Any]:
+        """删除指定日期的每日总结"""
+        try:
+            response = self.agent_client.session.delete(f"{self.agent_client.base_url}/api/reports/{date}")
+            response.raise_for_status()
+            self.logger.info(f"成功删除日期 {date} 的每日报告")
+            return {"success": True, "message": f"成功删除 {date} 的每日总结"}
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                self.logger.warning(f"日期 {date} 的每日报告不存在")
+                return {"success": False, "error": f"{date} 的每日总结不存在"}
+            else:
+                self.logger.error(f"删除日期 {date} 的每日报告失败: {str(e)}")
+                return {"success": False, "error": f"删除失败: {str(e)}"}
+        except Exception as e:
+            self.logger.error(f"删除日期 {date} 的每日报告失败: {str(e)}")
+            return {"success": False, "error": str(e)}
+
 
 # 向后兼容的类和方法（保留原有的AIClient等类名，但使用新的实现）
 class AIClient:

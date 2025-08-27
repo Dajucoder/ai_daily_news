@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Card, 
   Form, 
@@ -42,7 +42,7 @@ const SystemSettings: React.FC = () => {
   const [configs, setConfigs] = useState<SystemConfig[]>([]);
 
   // 默认配置项
-  const defaultConfigs: SystemConfig[] = [
+  const defaultConfigs: SystemConfig[] = useMemo(() => [
     {
       key: 'max_news_per_fetch',
       value: '10',
@@ -91,9 +91,9 @@ const SystemSettings: React.FC = () => {
       description: '日志级别',
       config_type: 'string'
     }
-  ];
+  ], []);
 
-  const loadConfigs = async () => {
+  const loadConfigs = useCallback(async () => {
     try {
       setLoading(true);
       // 这里应该调用API获取配置，暂时使用默认配置
@@ -116,7 +116,7 @@ const SystemSettings: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [form, defaultConfigs]);
 
   const saveConfigs = async (values: any) => {
     try {
@@ -150,7 +150,7 @@ const SystemSettings: React.FC = () => {
 
   useEffect(() => {
     loadConfigs();
-  }, []);
+  }, [loadConfigs]);
 
   const renderFormItem = (config: SystemConfig) => {
     const { key, description, config_type } = config;

@@ -16,6 +16,7 @@ import time
 from news_agent import NewsAgent
 from rss_fetcher import setup_logging
 from config import RSS_SOURCES
+from model_manager import ModelManager
 
 # 设置上海时区
 SHANGHAI_TZ = pytz.timezone('Asia/Shanghai')
@@ -24,23 +25,6 @@ SHANGHAI_TZ = pytz.timezone('Asia/Shanghai')
 os.environ['TZ'] = 'Asia/Shanghai'
 if hasattr(time, 'tzset'):
     time.tzset()
-"""
-AI新闻代理API服务器
-为Django后端提供RSS新闻抓取和处理服务
-"""
-import json
-import logging
-from datetime import datetime, date
-from typing import Dict, Any, List, Optional
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import threading
-import time
-
-from news_agent import NewsAgent
-from rss_fetcher import setup_logging
-from config import RSS_SOURCES
-
 
 app = Flask(__name__)
 CORS(app)  # 允许跨域请求
@@ -48,99 +32,10 @@ CORS(app)  # 允许跨域请求
 # 设置Flask应用无超时
 app.config['PERMANENT_SESSION_LIFETIME'] = None
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-"""
-AI新闻代理API服务器
-为Django后端提供RSS新闻抓取和处理服务
-"""
-import json
-import logging
-import os
-import pytz
-from datetime import datetime, date
-from typing import Dict, Any, List, Optional
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import threading
-import time
-
-from news_agent import NewsAgent
-from rss_fetcher import setup_logging
-from config import RSS_SOURCES
-
-# 设置上海时区
-SHANGHAI_TZ = pytz.timezone('Asia/Shanghai')
-
-# 设置系统时区环境变量
-os.environ['TZ'] = 'Asia/Shanghai'
-if hasattr(time, 'tzset'):
-    time.tzset()
-"""
-AI新闻代理API服务器
-为Django后端提供RSS新闻抓取和处理服务
-"""
-import json
-import logging
-from datetime import datetime, date
-from typing import Dict, Any, List, Optional
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import threading
-import time
-
-from news_agent import NewsAgent
-from rss_fetcher import setup_logging
-from config import RSS_SOURCES
-
-
-"""
-AI新闻代理API服务器
-为Django后端提供RSS新闻抓取和处理服务
-"""
-import json
-import logging
-import os
-import pytz
-from datetime import datetime, date
-from typing import Dict, Any, List, Optional
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import threading
-import time
-
-from news_agent import NewsAgent
-from rss_fetcher import setup_logging
-from config import RSS_SOURCES
-
-# 设置上海时区
-SHANGHAI_TZ = pytz.timezone('Asia/Shanghai')
-
-# 设置系统时区环境变量
-os.environ['TZ'] = 'Asia/Shanghai'
-if hasattr(time, 'tzset'):
-    time.tzset()
-"""
-AI新闻代理API服务器
-为Django后端提供RSS新闻抓取和处理服务
-"""
-import json
-import logging
-from datetime import datetime, date
-from typing import Dict, Any, List, Optional
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import threading
-import time
-
-from news_agent import NewsAgent
-from rss_fetcher import setup_logging
-from config import RSS_SOURCES
-
-
-app = Flask(__name__)
-CORS(app)  # 允许跨域请求
 
 # 全局变量
 news_agent = NewsAgent()
+model_manager = ModelManager()
 fetch_status = {
     'is_fetching': False,
     'progress': 0,
@@ -199,6 +94,7 @@ def fetch_news():
     data = request.get_json() or {}
     target_date_str = data.get('date')
     force_refresh = data.get('force_refresh', False)
+    model_id = data.get('model_id')  # 新增：指定使用的模型
     
     # 检查是否正在抓取
     if fetch_status['is_fetching']:
@@ -240,11 +136,23 @@ def fetch_news():
             })
         
         try:
+            # 如果指定了模型，先选择模型
+            if model_id:
+                update_fetch_status(5, f'选择AI模型: {model_id}...')
+                selected_model = model_manager.select_model(model_id)
+                if selected_model:
+                    # 通知news_agent更新模型
+                    news_agent.update_model(model_id)
+                    logging.info(f"NewsAgent已更新为使用模型: {selected_model.model_name}")
+                    update_fetch_status(10, f'已选择模型: {selected_model.model_name}')
+                else:
+                    logging.warning(f"指定的模型 {model_id} 不存在，将使用默认模型")
+            
             # 使用统一的进度回调执行完整的抓取和处理流程
             def progress_callback(progress, message):
                 update_fetch_status(progress, message)
             
-            update_fetch_status(5, '初始化新闻代理...')
+            update_fetch_status(15, '初始化新闻代理...')
             
             # 使用news_agent的统一方法处理所有步骤
             report = news_agent.run_daily_collection(target_date, progress_callback)
@@ -312,22 +220,38 @@ def get_reports():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/reports/<date>', methods=['GET'])
-def get_report_by_date(date):
-    """根据日期获取报告"""
-    try:
-        target_date = datetime.strptime(date, '%Y-%m-%d').date()
-        report = news_agent.get_report_by_date(target_date)
+@app.route('/api/reports/<date>', methods=['GET', 'DELETE'])
+def handle_report_by_date(date):
+    """根据日期获取或删除报告"""
+    if request.method == 'GET':
+        try:
+            target_date = datetime.strptime(date, '%Y-%m-%d').date()
+            report = news_agent.get_report_by_date(target_date)
+            
+            if not report:
+                return jsonify({'error': f'未找到 {date} 的报告'}), 404
+            
+            return jsonify(report)
         
-        if not report:
-            return jsonify({'error': f'未找到 {date} 的报告'}), 404
-        
-        return jsonify(report)
+        except ValueError:
+            return jsonify({'error': '日期格式错误，应为YYYY-MM-DD'}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
     
-    except ValueError:
-        return jsonify({'error': '日期格式错误，应为YYYY-MM-DD'}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    elif request.method == 'DELETE':
+        try:
+            target_date = datetime.strptime(date, '%Y-%m-%d').date()
+            success = news_agent.delete_report_by_date(target_date)
+            
+            if not success:
+                return jsonify({'error': f'未找到 {date} 的报告或删除失败'}), 404
+            
+            return jsonify({'message': f'成功删除 {date} 的报告'})
+        
+        except ValueError:
+            return jsonify({'error': '日期格式错误，应为YYYY-MM-DD'}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/reports/latest', methods=['GET'])
@@ -417,6 +341,76 @@ def get_structured_news():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/models', methods=['GET'])
+def get_available_models():
+    """获取可用的AI模型列表"""
+    try:
+        models = model_manager.get_available_models()
+        return jsonify({
+            'models': model_manager.list_models_summary(),
+            'total_count': len(models),
+            'current_model': model_manager.get_current_model().model_id if model_manager.get_current_model() else None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/models/select', methods=['POST'])
+def select_model():
+    """选择AI模型"""
+    try:
+        data = request.get_json() or {}
+        model_id = data.get('model_id')
+        
+        if not model_id:
+            return jsonify({'error': '请提供model_id参数'}), 400
+        
+        selected_model = model_manager.select_model(model_id)
+        if not selected_model:
+            return jsonify({'error': f'未找到指定的模型: {model_id}'}), 404
+        
+        # 通知news_agent更新模型
+        news_agent.update_model(model_id)
+        logging.info(f"NewsAgent已更新为使用模型: {selected_model.model_name}")
+        
+        return jsonify({
+            'message': f'已选择模型: {selected_model.model_name}',
+            'model': {
+                'model_id': selected_model.model_id,
+                'model_name': selected_model.model_name,
+                'provider_name': selected_model.provider_name,
+                'provider_type': selected_model.provider_type
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/models/current', methods=['GET'])
+def get_current_model():
+    """获取当前选择的AI模型"""
+    try:
+        current_model = model_manager.get_current_model()
+        if not current_model:
+            return jsonify({'error': '未选择任何模型'}), 404
+        
+        return jsonify({
+            'model': {
+                'model_id': current_model.model_id,
+                'model_name': current_model.model_name,
+                'provider_name': current_model.provider_name,
+                'provider_type': current_model.provider_type,
+                'max_tokens': current_model.max_tokens,
+                'support_functions': current_model.support_functions,
+                'support_vision': current_model.support_vision
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     setup_logging()
     
@@ -434,7 +428,11 @@ if __name__ == '__main__':
     print("  GET  /api/reports         - 报告列表")
     print("  GET  /api/reports/latest  - 最新报告")
     print("  GET  /api/reports/<date>  - 指定日期报告")
+    print("  DELETE /api/reports/<date> - 删除指定日期报告")
     print("  GET  /api/news/structured - 结构化新闻数据")
+    print("  GET  /api/models           - 可用模型列表")
+    print("  POST /api/models/select    - 选择模型")
+    print("  GET  /api/models/current   - 当前选择的模型")
     print("配置: 无超时限制，使用上海时区")
     
     # 启动Flask应用，设置无超时

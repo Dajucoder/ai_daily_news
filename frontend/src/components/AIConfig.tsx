@@ -13,7 +13,6 @@ import {
   Popconfirm,
   Tag,
   message,
-  Divider,
   Tabs,
   Badge,
   Alert,
@@ -24,19 +23,19 @@ import {
   EditOutlined,
   DeleteOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
+  CheckOutlined,
   ApiOutlined,
   RobotOutlined,
   SettingOutlined,
   ThunderboltOutlined,
-  EyeOutlined
+  ReloadOutlined
 } from '@ant-design/icons';
 import aiConfigService from '../services/aiConfigService';
-import { AIProvider, AIModel, AIProviderForm, AIModelForm } from '../types';
+import agentService from '../services/agentService';
+import { AIProvider, AIModel, AIProviderForm, AIModelForm, ModelInfo } from '../types';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 const AIConfig: React.FC = () => {
   const [providers, setProviders] = useState<AIProvider[]>([]);
@@ -51,13 +50,53 @@ const AIConfig: React.FC = () => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [detectingModels, setDetectingModels] = useState(false);
   
+  // Agent模型选择相关状态
+  const [agentModels, setAgentModels] = useState<ModelInfo[]>([]);
+  const [currentAgentModel, setCurrentAgentModel] = useState<ModelInfo | null>(null);
+  const [agentLoading, setAgentLoading] = useState(false);
+  
   const [providerForm] = Form.useForm();
   const [modelForm] = Form.useForm();
 
   useEffect(() => {
     loadProviders();
     loadModels();
+    loadAgentModels();
   }, []);
+
+  const loadAgentModels = async () => {
+    try {
+      setAgentLoading(true);
+      const response = await agentService.getAvailableModels();
+      setAgentModels(response.models || []);
+      
+      // 获取当前选择的模型
+      if (response.current_model) {
+        const currentModel = response.models.find(m => m.model_id === response.current_model);
+        setCurrentAgentModel(currentModel || null);
+      }
+    } catch (error: any) {
+      console.error('加载Agent模型失败:', error);
+      message.warning('无法连接到Agent服务，将使用默认配置');
+      setAgentModels([]);
+    } finally {
+      setAgentLoading(false);
+    }
+  };
+
+  const selectAgentModel = async (modelId: string) => {
+    try {
+      setAgentLoading(true);
+      await agentService.selectModel(modelId);
+      message.success('Agent模型选择成功');
+      await loadAgentModels(); // 重新加载以获取更新后的状态
+    } catch (error: any) {
+      console.error('选择Agent模型失败:', error);
+      message.error('选择Agent模型失败');
+    } finally {
+      setAgentLoading(false);
+    }
+  };
 
   const loadProviders = async () => {
     try {
@@ -438,87 +477,193 @@ const AIConfig: React.FC = () => {
           padding: '16px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}
-      >
-        <TabPane tab={
-          <span>
-            <ApiOutlined />
-            AI提供商 ({providers.length})
-          </span>
-        } key="providers">
-          <Card style={{ border: 'none', background: 'transparent' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <Button 
-                type="primary" 
-                icon={<PlusOutlined />}
-                onClick={handleCreateProvider}
-                size="large"
-                style={{ borderRadius: '8px' }}
-              >
-                添加AI提供商
-              </Button>
-            </div>
-            
-            <List
-              loading={loading}
-              dataSource={providers}
-              renderItem={renderProviderCard}
-              locale={{ emptyText: '暂无AI提供商配置' }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane tab={
-          <span>
-            <RobotOutlined />
-            AI模型 ({models.length})
-          </span>
-        } key="models">
-          <Card>
-            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Space>
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />}
-                  onClick={handleCreateModel}
-                >
-                  添加模型
-                </Button>
-                <Select
-                  placeholder="筛选提供商"
-                  style={{ width: 200 }}
-                  allowClear
-                  showSearch
-                  value={selectedProviderId}
-                  onChange={setSelectedProviderId}
-                  filterOption={(input, option) => {
-                    if (!option?.value) return false;
-                    const provider = providers.find(p => p.id === option.value);
-                    if (!provider) return false;
-                    const searchText = input.toLowerCase();
-                    return !!(
-                      provider.name.toLowerCase().includes(searchText) ||
-                      provider.provider_type.toLowerCase().includes(searchText)
-                    );
-                  }}
-                >
-                  {providers.map(provider => (
-                    <Option key={provider.id} value={provider.id}>
-                      {provider.name} ({provider.provider_type})
-                    </Option>
-                  ))}
-                </Select>
-              </Space>
-            </div>
-            
-            <List
-              loading={loading}
-              dataSource={filteredModels}
-              renderItem={renderModelCard}
-              locale={{ emptyText: '暂无AI模型配置' }}
-            />
-          </Card>
-        </TabPane>
-      </Tabs>
+        items={[
+          {
+            key: 'providers',
+            label: (
+              <span>
+                <ApiOutlined />
+                AI提供商 ({providers.length})
+              </span>
+            ),
+            children: (
+              <Card style={{ border: 'none', background: 'transparent' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />}
+                    onClick={handleCreateProvider}
+                    size="large"
+                    style={{ borderRadius: '8px' }}
+                  >
+                    添加AI提供商
+                  </Button>
+                </div>
+                
+                <List
+                  loading={loading}
+                  dataSource={providers}
+                  renderItem={renderProviderCard}
+                  locale={{ emptyText: '暂无AI提供商配置' }}
+                />
+              </Card>
+            )
+          },
+          {
+            key: 'models',
+            label: (
+              <span>
+                <RobotOutlined />
+                AI模型 ({models.length})
+              </span>
+            ),
+            children: (
+              <Card>
+                <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Space>
+                    <Button 
+                      type="primary" 
+                      icon={<PlusOutlined />}
+                      onClick={handleCreateModel}
+                    >
+                      添加模型
+                    </Button>
+                    <Select
+                      placeholder="筛选提供商"
+                      style={{ width: 200 }}
+                      allowClear
+                      showSearch
+                      value={selectedProviderId}
+                      onChange={setSelectedProviderId}
+                      filterOption={(input, option) => {
+                        if (!option?.value) return false;
+                        const provider = providers.find(p => p.id === option.value);
+                        if (!provider) return false;
+                        const searchText = input.toLowerCase();
+                        return !!(
+                          provider.name.toLowerCase().includes(searchText) ||
+                          provider.provider_type.toLowerCase().includes(searchText)
+                        );
+                      }}
+                    >
+                      {providers.map(provider => (
+                        <Option key={provider.id} value={provider.id}>
+                          {provider.name} ({provider.provider_type})
+                        </Option>
+                      ))}
+                    </Select>
+                  </Space>
+                </div>
+                
+                <List
+                  loading={loading}
+                  dataSource={filteredModels}
+                  renderItem={renderModelCard}
+                  locale={{ emptyText: '暂无AI模型配置' }}
+                />
+              </Card>
+            )
+          },
+          {
+            key: 'agent-models',
+            label: (
+              <span>
+                <ThunderboltOutlined />
+                Agent模型 ({agentModels.length})
+              </span>
+            ),
+            children: (
+              <Card style={{ border: 'none', background: 'transparent' }}>
+                <Alert
+                  message="Agent模型配置"
+                  description="选择AI新闻代理服务使用的模型。这些模型将用于新闻内容的AI分析和处理。"
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: '16px' }}
+                />
+                
+                <div style={{ marginBottom: '16px' }}>
+                  <Button 
+                    type="primary" 
+                    icon={<ReloadOutlined />}
+                    onClick={loadAgentModels}
+                    loading={agentLoading}
+                    size="large"
+                    style={{ borderRadius: '8px' }}
+                  >
+                    刷新模型列表
+                  </Button>
+                </div>
+                
+                {currentAgentModel && (
+                  <Alert
+                    message="当前选择的模型"
+                    description={
+                      <div>
+                        <strong>{currentAgentModel.model_name}</strong>
+                        <br />
+                        提供商: {currentAgentModel.provider_name} ({currentAgentModel.provider_type})
+                        <br />
+                        最大Token: {currentAgentModel.max_tokens.toLocaleString()}
+                        {currentAgentModel.support_functions && <Tag color="blue">支持函数调用</Tag>}
+                        {currentAgentModel.support_vision && <Tag color="green">支持图像理解</Tag>}
+                      </div>
+                    }
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: '16px' }}
+                  />
+                )}
+                
+                <List
+                  loading={agentLoading}
+                  dataSource={agentModels}
+                  renderItem={(model) => (
+                    <List.Item
+                      actions={[
+                        <Button
+                          key="select"
+                          type={currentAgentModel?.model_id === model.model_id ? "primary" : "default"}
+                          icon={currentAgentModel?.model_id === model.model_id ? <CheckCircleOutlined /> : <CheckOutlined />}
+                          onClick={() => selectAgentModel(model.model_id)}
+                          loading={agentLoading}
+                          disabled={currentAgentModel?.model_id === model.model_id}
+                        >
+                          {currentAgentModel?.model_id === model.model_id ? '当前选择' : '选择'}
+                        </Button>
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={<RobotOutlined style={{ fontSize: '24px', color: '#1890ff' }} />}
+                        title={
+                          <Space>
+                            <span>{model.model_name}</span>
+                            {currentAgentModel?.model_id === model.model_id && (
+                              <Tag color="green">当前</Tag>
+                            )}
+                          </Space>
+                        }
+                        description={
+                          <div>
+                            <div><strong>提供商:</strong> {model.provider_name} ({model.provider_type})</div>
+                            <div><strong>模型ID:</strong> {model.model_id}</div>
+                            <div><strong>最大Token:</strong> {model.max_tokens.toLocaleString()}</div>
+                            <Space>
+                              {model.support_functions && <Tag color="blue">函数调用</Tag>}
+                              {model.support_vision && <Tag color="green">图像理解</Tag>}
+                            </Space>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                  locale={{ emptyText: '暂无可用Agent模型，请检查Agent服务状态' }}
+                />
+              </Card>
+            )
+          }
+        ]}
+      />
 
       {/* AI提供商配置Modal */}
       <Modal
@@ -560,10 +705,9 @@ const AIConfig: React.FC = () => {
           <Form.Item
             label="API密钥"
             name="api_key"
-            rules={currentProvider ? [] : [{ required: true, message: '请输入API密钥' }]}
-            help={currentProvider ? '留空表示不修改现有密钥' : ''}
+            help={currentProvider ? '留空表示不修改现有密钥' : 'API密钥可为空（适用于本地ollama等模型）'}
           >
-            <Input.Password placeholder="输入您的API密钥" />
+            <Input.Password placeholder="输入您的API密钥（可选）" />
           </Form.Item>
 
           <Form.Item

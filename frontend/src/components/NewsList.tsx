@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
   List, 
@@ -12,7 +12,8 @@ import {
   Typography,
   message,
   Modal,
-  Pagination
+  Pagination,
+  Checkbox
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -21,7 +22,8 @@ import {
   CalendarOutlined,
   UserOutlined,
   DeleteOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  ClearOutlined
 } from '@ant-design/icons';
 import { NewsItem, CATEGORY_LABELS, IMPORTANCE_LABELS } from '../types';
 import { NewsService } from '../services/newsService';
@@ -46,8 +48,10 @@ const NewsList: React.FC = () => {
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [availableSources, setAvailableSources] = useState<string[]>([]);
+  const [selectedNewsIds, setSelectedNewsIds] = useState<number[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
 
-  const loadNews = async (page = 1) => {
+  const loadNews = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const params = {
@@ -81,7 +85,7 @@ const NewsList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageSize, filters]);
 
   const loadAvailableSources = async () => {
     try {
@@ -104,7 +108,7 @@ const NewsList: React.FC = () => {
 
   useEffect(() => {
     loadNews(1);
-  }, [filters]);
+  }, [filters, loadNews]);
 
   useEffect(() => {
     loadAvailableSources();
@@ -139,6 +143,8 @@ const NewsList: React.FC = () => {
         try {
           await NewsService.deleteNews(newsId);
           message.success('新闻删除成功');
+          // 从选中列表中移除
+          setSelectedNewsIds(prev => prev.filter(id => id !== newsId));
           loadNews(currentPage); // 重新加载当前页
         } catch (error) {
           message.error('删除新闻失败');
@@ -146,6 +152,81 @@ const NewsList: React.FC = () => {
       },
     });
   };
+
+  const handleBatchDelete = () => {
+    if (selectedNewsIds.length === 0) {
+      message.warning('请先选择要删除的新闻');
+      return;
+    }
+
+    Modal.confirm({
+      title: '确认批量删除',
+      icon: <ExclamationCircleOutlined />,
+      content: `确定要删除选中的 ${selectedNewsIds.length} 条新闻吗？此操作不可恢复。`,
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      async onOk() {
+        try {
+          const result = await NewsService.batchDeleteNews(selectedNewsIds);
+          message.success(result.message);
+          setSelectedNewsIds([]);
+          setSelectAll(false);
+          loadNews(currentPage); // 重新加载当前页
+        } catch (error) {
+          message.error('批量删除失败');
+        }
+      },
+    });
+  };
+
+  const handleDeleteAll = () => {
+    Modal.confirm({
+      title: '确认删除所有新闻',
+      icon: <ExclamationCircleOutlined />,
+      content: '确定要删除所有新闻吗？此操作不可恢复，将清空所有新闻数据。',
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      async onOk() {
+        try {
+          const result = await NewsService.deleteAllNews();
+          message.success(result.message);
+          setSelectedNewsIds([]);
+          setSelectAll(false);
+          loadNews(1); // 重新加载第一页
+        } catch (error) {
+          message.error('删除所有新闻失败');
+        }
+      },
+    });
+  };
+
+  const handleSelectNews = (newsId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedNewsIds(prev => [...prev, newsId]);
+    } else {
+      setSelectedNewsIds(prev => prev.filter(id => id !== newsId));
+      setSelectAll(false);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedNewsIds(news.map(item => item.id));
+    } else {
+      setSelectedNewsIds([]);
+    }
+  };
+
+  // 当新闻列表变化时，更新全选状态
+  useEffect(() => {
+    if (news.length > 0) {
+      const allSelected = news.every(item => selectedNewsIds.includes(item.id));
+      setSelectAll(allSelected);
+    }
+  }, [news, selectedNewsIds]);
 
   const getImportanceColor = (importance: string) => {
     switch (importance) {
@@ -248,6 +329,38 @@ const NewsList: React.FC = () => {
             </Button>
           </Col>
         </Row>
+        
+        {/* 批量操作按钮 */}
+        <Row style={{ marginTop: '16px' }}>
+          <Col span={24}>
+            <Space>
+              <Checkbox
+                checked={selectAll}
+                indeterminate={selectedNewsIds.length > 0 && selectedNewsIds.length < news.length}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+              >
+                全选
+              </Checkbox>
+              <Button
+                type="primary"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+                disabled={selectedNewsIds.length === 0}
+              >
+                批量删除 ({selectedNewsIds.length})
+              </Button>
+              <Button
+                type="primary"
+                danger
+                icon={<ClearOutlined />}
+                onClick={handleDeleteAll}
+              >
+                一键删除所有
+              </Button>
+            </Space>
+          </Col>
+        </Row>
       </Card>
 
       {/* 新闻列表 */}
@@ -302,6 +415,12 @@ const NewsList: React.FC = () => {
               }}
             >
               <List.Item.Meta
+                avatar={
+                  <Checkbox
+                    checked={selectedNewsIds.includes(item.id)}
+                    onChange={(e) => handleSelectNews(item.id, e.target.checked)}
+                  />
+                }
                 title={
                   <div style={{ marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>

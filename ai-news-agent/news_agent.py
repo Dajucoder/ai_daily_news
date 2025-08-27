@@ -17,13 +17,14 @@ from ai_processor import AIProcessor
 class NewsAgent:
     """新闻代理主类"""
     
-    def __init__(self, output_dir: str = "output"):
+    def __init__(self, output_dir: str = "output", model_id: str = None):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         
         self.fetcher = RSSFetcher()
-        self.processor = AIProcessor()
+        self.processor = AIProcessor(model_id=model_id)
         self.logger = logging.getLogger(__name__)
+        self.current_model_id = model_id
     
     def run_daily_collection(self, target_date: Optional[date] = None, progress_callback=None) -> Dict[str, Any]:
         """
@@ -217,6 +218,59 @@ class NewsAgent:
                 continue
         
         return sorted(dates)
+    
+    def delete_report_by_date(self, target_date: date) -> bool:
+        """
+        删除指定日期的报告
+        
+        Args:
+            target_date: 目标日期
+            
+        Returns:
+            删除成功返回True，否则返回False
+        """
+        date_str = target_date.strftime('%Y%m%d')
+        report_file = self.output_dir / f"ai_news_report_{date_str}.json"
+        simplified_file = self.output_dir / f"ai_news_simplified_{date_str}.json"
+        
+        deleted_files = []
+        
+        try:
+            # 删除主报告文件
+            if report_file.exists():
+                report_file.unlink()
+                deleted_files.append(str(report_file))
+                self.logger.info(f"已删除报告文件: {report_file}")
+            
+            # 删除简化报告文件
+            if simplified_file.exists():
+                simplified_file.unlink()
+                deleted_files.append(str(simplified_file))
+                self.logger.info(f"已删除简化报告文件: {simplified_file}")
+            
+            if deleted_files:
+                self.logger.info(f"成功删除 {target_date} 的报告，共删除 {len(deleted_files)} 个文件")
+                return True
+            else:
+                self.logger.warning(f"未找到 {target_date} 的报告文件")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"删除 {target_date} 报告失败: {str(e)}")
+            return False
+    
+    def update_model(self, model_id: str):
+        """
+        更新使用的AI模型
+        
+        Args:
+            model_id: 新的模型ID
+        """
+        if model_id != self.current_model_id:
+            self.logger.info(f"更新AI模型从 {self.current_model_id} 到 {model_id}")
+            # 重新创建processor实例以使用新模型
+            self.processor = AIProcessor(model_id=model_id)
+            self.current_model_id = model_id
 
 
 def main():

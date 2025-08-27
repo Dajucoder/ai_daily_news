@@ -155,6 +155,79 @@ class NewsItemViewSet(viewsets.ModelViewSet):
         }
         
         return Response(stats_data)
+    
+    @extend_schema(
+        summary="批量删除新闻",
+        tags=["新闻管理"],
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'ids': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                        'description': '要删除的新闻ID列表'
+                    }
+                },
+                'required': ['ids']
+            }
+        },
+        responses={
+            200: {"description": "批量删除成功"},
+            400: {"description": "请求参数错误"}
+        }
+    )
+    @action(detail=False, methods=['post'], url_path='batch-delete')
+    def batch_delete(self, request):
+        """批量删除新闻"""
+        ids = request.data.get('ids', [])
+        
+        if not ids or not isinstance(ids, list):
+            return Response(
+                {'error': '请提供要删除的新闻ID列表'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # 删除指定的新闻
+            deleted_count, _ = NewsItem.objects.filter(id__in=ids).delete()
+            
+            return Response({
+                'message': f'成功删除 {deleted_count} 条新闻',
+                'deleted_count': deleted_count
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'批量删除失败: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @extend_schema(
+        summary="删除所有新闻",
+        tags=["新闻管理"],
+        responses={
+            200: {"description": "删除所有新闻成功"},
+            500: {"description": "删除失败"}
+        }
+    )
+    @action(detail=False, methods=['post'], url_path='delete-all')
+    def delete_all(self, request):
+        """删除所有新闻"""
+        try:
+            # 删除所有新闻
+            deleted_count, _ = NewsItem.objects.all().delete()
+            
+            return Response({
+                'message': f'成功删除所有新闻，共 {deleted_count} 条',
+                'deleted_count': deleted_count
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'删除所有新闻失败: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class FetchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -259,7 +332,72 @@ class NewsServiceViewSet(viewsets.ViewSet):
         responses={200: {"description": "AI代理状态信息"}}
     )
     @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'])
     def agent_status(self, request):
         """获取AI代理状态"""
         agent_status = self.news_service.get_agent_status()
         return Response(agent_status)
+    
+    @extend_schema(
+        summary="获取每日总结报告列表",
+        tags=["新闻服务"],
+        responses={200: {"description": "每日总结报告列表"}}
+    )
+    @action(detail=False, methods=['get'], url_path='reports')
+    def daily_reports(self, request):
+        """获取每日总结报告列表"""
+        reports = self.news_service.get_daily_reports()
+        return Response(reports)
+    
+    @extend_schema(
+        summary="获取最新每日总结",
+        tags=["新闻服务"],
+        responses={200: {"description": "最新每日总结"}}
+    )
+    @action(detail=False, methods=['get'], url_path='reports/latest')
+    def latest_daily_report(self, request):
+        """获取最新每日总结"""
+        report = self.news_service.get_latest_daily_report()
+        return Response(report)
+    
+    @extend_schema(
+        summary="根据日期获取每日总结",
+        tags=["新闻服务"],
+        responses={200: {"description": "指定日期的每日总结"}}
+    )
+    @action(detail=False, methods=['get'], url_path='reports/(?P<date>[0-9-]+)')
+    def daily_report_by_date(self, request, date=None):
+        """根据日期获取每日总结"""
+        if not date:
+            return Response({"error": "日期参数缺失"}, status=400)
+        report = self.news_service.get_daily_report_by_date(date)
+        return Response(report)
+    
+    @extend_schema(
+        summary="删除每日总结",
+        tags=["新闻服务"],
+        responses={
+            200: {"description": "删除成功"},
+            404: {"description": "总结不存在"}
+        }
+    )
+    @action(detail=False, methods=['delete'], url_path='reports/(?P<date>[0-9-]+)')
+    def delete_daily_report(self, request, date=None):
+        """删除指定日期的每日总结"""
+        if not date:
+            return Response({"error": "日期参数缺失"}, status=400)
+        
+        try:
+            result = self.news_service.delete_daily_report(date)
+            if result.get('success'):
+                return Response({'message': f'成功删除 {date} 的每日总结'})
+            else:
+                return Response(
+                    {'error': result.get('error', '删除失败')}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        except Exception as e:
+            return Response(
+                {'error': f'删除每日总结失败: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

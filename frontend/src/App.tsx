@@ -25,6 +25,7 @@ import NewsRecommendations from './components/NewsRecommendations';
 import NewsAnalytics from './components/NewsAnalytics';
 import Chat from './components/Chat';
 import AIConfig from './components/AIConfig';
+import DailySummary from './components/DailySummary';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -50,6 +51,12 @@ const AppContent: React.FC = () => {
       icon: <FileTextOutlined />,
       label: '新闻列表',
       path: '/news'
+    },
+    {
+      key: 'daily-summary',
+      icon: <FileTextOutlined />,
+      label: '每日总结',
+      path: '/daily-summary'
     },
     {
       key: 'chat',
@@ -90,7 +97,7 @@ const AppContent: React.FC = () => {
   ];
 
   // 根据当前路径确定选中的菜单项
-  const getSelectedKey = () => {
+  const getSelectedKey = (): string => {
     const path = location.pathname;
     const item = menuItems.find(item => item.path === path);
     return item ? item.key : 'dashboard';
@@ -98,7 +105,7 @@ const AppContent: React.FC = () => {
 
   const handleMenuClick = ({ key }: { key: string }) => {
     const item = menuItems.find(item => item.key === key);
-    if (item) {
+    if (item && item.path) {
       navigate(item.path);
     }
   };
@@ -206,7 +213,8 @@ const AppContent: React.FC = () => {
           items={menuItems.map(item => ({
             key: item.key,
             icon: item.icon,
-            label: item.label
+            label: item.label,
+            type: 'item' as const
           }))}
         />
       </Sider>
@@ -267,6 +275,8 @@ const AppContent: React.FC = () => {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/news" element={<NewsList />} />
+            <Route path="/news" element={<NewsList />} />
+            <Route path="/daily-summary" element={<DailySummary />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/ai-config" element={<AIConfig />} />
             <Route path="/recommendations" element={<NewsRecommendations />} />

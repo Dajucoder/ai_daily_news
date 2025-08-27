@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
   Table, 
@@ -47,7 +47,7 @@ const FetchHistory: React.FC = () => {
     partial: 0
   });
 
-  const loadHistory = async (page = 1) => {
+  const loadHistory = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const params: any = {
@@ -79,11 +79,11 @@ const FetchHistory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageSize, dateRange]);
 
   useEffect(() => {
     loadHistory(1);
-  }, [dateRange]);
+  }, [dateRange, loadHistory]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

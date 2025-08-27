@@ -6,7 +6,9 @@ import {
   SendMessageRequest,
   SendMessageResponse,
   CreateConversationRequest,
-  ApiResponse
+  ApiResponse,
+  AIModel,
+  AIProvider
 } from '../types';
 
 export const chatService = {
@@ -70,6 +72,19 @@ export const chatService = {
   // 更新聊天设置
   updateChatSettings: async (data: Partial<ChatSettings>): Promise<ChatSettings> => {
     const response = await api.patch<ChatSettings>('/api/chat/settings/', data);
+    return response.data;
+  },
+
+  // 获取AI模型列表
+  getAIModels: async (providerId?: number): Promise<AIModel[]> => {
+    const params = providerId ? { provider_id: providerId } : {};
+    const response = await api.get<AIModel[]>('/api/chat/models/', { params });
+    return response.data;
+  },
+
+  // 获取AI服务提供商列表
+  getAIProviders: async (): Promise<AIProvider[]> => {
+    const response = await api.get<AIProvider[]>('/api/chat/providers/');
     return response.data;
   }
 };
