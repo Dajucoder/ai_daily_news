@@ -293,7 +293,7 @@ ai_daily_news/
 ### 开发环境启动
 ```bash
 # 启动所有服务
-docker-compose -f docker-compose.dev.yml up -d
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 # 查看服务状态
 docker-compose ps
@@ -302,6 +302,9 @@ docker-compose ps
 docker-compose logs -f backend
 docker-compose logs -f frontend
 docker-compose logs -f ai-news-agent
+
+# 停止服务
+docker-compose down
 ```
 
 ## 🤝 贡献规范
